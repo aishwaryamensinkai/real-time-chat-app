@@ -1,0 +1,47 @@
+------------------------------------      ------------------------------------      ------------------------------------
+|             Users                |      |           ChatRooms              |      |           Messages               |
+|----------------------------------|      |----------------------------------|      |----------------------------------|
+| + user_id : UUID (PK)            |      | + room_id : UUID (PK)            |      | + message_id : UUID (PK)         |
+| + username : String              |      | + name : String                  |      | + text : String                  |
+| + email : String                 |      | + created_by : UUID              |      | + timestamp : DateTime           |
+| + password_hash : String         |      |   (Reference to Users)           |      | + sender_id : UUID               |
+| + role : Enum ('Admin', 'Member')|      | + is_private : Boolean           |      |   (Reference to Users)           |
+| + messages_sent : [              |      | + participants : [               |      |                                  |
+|    Embedded Message References   |      |     Embedded User References     |      |                                  |
+|    (message_id, text, timestamp) |      |   ]                              |      |                                  |
+| ]                                |      | + messages : [                   |      |                                  |
+|                                  |      |     Embedded Message IDs         |      |                                  |
+|                      e            |      |   ]                              |      |                                  |
+------------------------------------      ------------------------------------      ------------------------------------
+                                            |         ^       |              |  
+                                            |         |       --------------|  
+                                            |         |         Embeds message IDs
+                                            |       References creating user
+                                            |
+                                        Many-to-Many: User participates in many ChatRooms
+                                            |
+                                        One-to-Many: User creates many ChatRooms
+                                            |
+                                        One-to-Many: User sends many Messages
+                                            |
+                                        One-to-Many: ChatRoom has many Messages
+
+Explanation of Relationships in the Diagram:
+1. One-To-Many: User creates many ChatRooms
+    - A User can create many ChatRooms.
+    - This is represented by the created_by field in the ChatRooms table, which references the user_id in the Users table.
+2. Many-To-Many: User participates in many ChatRooms
+    - A User can participate in many ChatRooms, and a ChatRoom can have multiple participants.
+    - This relationship is represented by the participants field in the ChatRooms table, which contains an array of references 
+      to user_ids from the Users table.
+3. One-To-Many: User sends many Messages
+    - A User can send many Messages, but each Message is sent by one User.
+    - The sender_id field in the Messages table references the user_id in the Users table.
+4. One-To-Many: ChatRoom has many Messages
+    - A ChatRoom can contain many Messages, but each Message belongs to one ChatRoom.
+    - The messages field in the ChatRooms table contains an array of message IDs, representing the messages sent in the chat room.
+
+
+
+
+
