@@ -1,5 +1,6 @@
 const express = require("express");
 const ChatRoom = require("../models/ChatRoom");
+const Message = require("../models/Message");
 const authMiddleware = require("../middleware/authMiddleware");
 const router = express.Router();
 const activeUsers = {}; // To track active users in each room using Socket.IO
@@ -60,19 +61,6 @@ router.delete("/delete/:id", authMiddleware, async (req, res) => {
   }
 });
 
-// Get All Chat Rooms
-router.get("/", authMiddleware, async (req, res) => {
-  try {
-    const chatRooms = await ChatRoom.find().populate(
-      "created_by",
-      "username email"
-    );
-    res.json(chatRooms);
-  } catch (err) {
-    res.status(500).json({ msg: "Server error", error: err.message });
-  }
-});
-
 // Join Chat Room
 router.post("/join/:id", authMiddleware, async (req, res) => {
   const roomId = req.params.id;
@@ -123,6 +111,69 @@ router.post("/leave/:id", authMiddleware, async (req, res) => {
     }
 
     res.json({ msg: "Left chat room", chatRoom: room });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+});
+
+// Get All Chat Rooms
+router.get("/", authMiddleware, async (req, res) => {
+  try {
+    const chatRooms = await ChatRoom.find().populate(
+      "created_by",
+      "username email"
+    );
+    res.json(chatRooms);
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+});
+
+// Send a Message
+router.post("/message", authMiddleware, async (req, res) => {
+  const { roomId, text } = req.body;
+  const userId = req.user.id;
+
+  // Validate input
+  if (!roomId || !text) {
+    return res
+      .status(400)
+      .json({ msg: "Room ID and message text are required" });
+  }
+
+  try {
+    const room = await ChatRoom.findById(roomId);
+    if (!room) return res.status(404).json({ msg: "Chat room not found" });
+
+    const message = new Message({
+      text,
+      sender: userId,
+      room: roomId,
+    });
+
+    await message.save();
+
+    const populatedMessage = await message.populate("sender", "username");
+
+    res.status(201).json({ msg: "Message sent", message: populatedMessage });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+});
+
+// Get Chat History
+router.get("/history/:roomId", authMiddleware, async (req, res) => {
+  const { roomId } = req.params;
+
+  try {
+    const room = await ChatRoom.findById(roomId);
+    if (!room) return res.status(404).json({ msg: "Chat room not found" });
+
+    const messages = await Message.find({ room: roomId })
+      .populate("sender", "username")
+      .sort("timestamp");
+
+    res.json(messages);
   } catch (err) {
     res.status(500).json({ msg: "Server error", error: err.message });
   }

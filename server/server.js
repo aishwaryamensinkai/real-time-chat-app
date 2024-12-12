@@ -10,6 +10,7 @@ const chatRoomRoutes = require("./routes/chatRoomRoutes");
 const Message = require("./models/Message");
 const ChatRoom = require("./models/ChatRoom");
 const User = require("./models/User");
+const errorMiddleware = require("./middleware/errorMiddleware"); // Import error middleware
 
 const app = express();
 const server = http.createServer(app);
@@ -35,6 +36,9 @@ app.use("/api/chatroom", chatRoomRoutes);
 
 // Placeholder route
 app.get("/", (req, res) => res.send("Real-Time Chat Application API"));
+
+// Use error handling middleware
+app.use(errorMiddleware);
 
 // Real-Time Communication with Socket.IO
 io.on("connection", (socket) => {
