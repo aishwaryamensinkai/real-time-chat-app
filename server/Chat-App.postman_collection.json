@@ -1,0 +1,337 @@
+{
+	"info": {
+		"_postman_id": "5fe62c6a-b0b5-4080-a995-621c48d41b5b",
+		"name": "Chat-App",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "38691949"
+	},
+	"item": [
+		{
+			"name": "1. User Signup",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"username\": \"testuser\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@1234\",\n  \"role\": \"Member\"\n}\n\n// {\n//   \"username\": \"adminuser\",\n//   \"email\": \"admin@example.com\",\n//   \"password\": \"Admin@1234\",\n//   \"role\": \"Admin\"\n// }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5001/api/auth/signup",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"auth",
+						"signup"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:5001/api/auth/signup \\\n-H \"Content-Type: application/json\" \\\n-d '{\n  \"username\": \"testuser\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@1234\",\n  \"role\": \"Member\"\n}'\n"
+			},
+			"response": []
+		},
+		{
+			"name": "2. User Login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@1234\"\n}\n\n// {\n//   \"email\": \"admin@example.com\",\n//   \"password\": \"Admin@1234\"\n// }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5001/api/auth/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"auth",
+						"login"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:5001/api/auth/login \\\n-H \"Content-Type: application/json\" \\\n-d '{\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Test@1234\"\n}'\n"
+			},
+			"response": []
+		},
+		{
+			"name": "3. Create Chat Room (Admin Only)",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NWIxMDY5MzZmYTVhYjY5M2YxMmM3YSIsInJvbGUiOiJBZG1pbiIsImlhdCI6MTczNDAyMTkzOCwiZXhwIjoxNzM0MDI1NTM4fQ.JObPm9NkzO1_f2Rt4WE8mhtg0ZkJfnK9xzom-QSgiOw"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"name\": \"General\",\n  \"is_private\": false\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5001/api/chatroom/create",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"chatroom",
+						"create"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:5001/api/chatroom/create \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer <token>\" \\\n-d '{\n  \"name\": \"General\",\n  \"is_private\": false\n}'\n"
+			},
+			"response": []
+		},
+		{
+			"name": "4. Get All Chat Rooms",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NWIwZWVhMzZmYTVhYjY5M2YxMmM3MiIsInJvbGUiOiJNZW1iZXIiLCJpYXQiOjE3MzQwMjIwOTYsImV4cCI6MTczNDAyNTY5Nn0.xFxFB6JOKpIad8vZdkisWspEgr13yrLUzazNTYPtuHs"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5001/api/chatroom",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"chatroom"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET http://localhost:5001/api/chatroom \\\n-H \"Authorization: Bearer <token>\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "5. Join Chat Room",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NWIwZWVhMzZmYTVhYjY5M2YxMmM3MiIsInJvbGUiOiJNZW1iZXIiLCJpYXQiOjE3MzQwMjIwOTYsImV4cCI6MTczNDAyNTY5Nn0.xFxFB6JOKpIad8vZdkisWspEgr13yrLUzazNTYPtuHs"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5001/api/chatroom/join/675b134e36fa5ab693f12c96",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"chatroom",
+						"join",
+						"675b134e36fa5ab693f12c96"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:5001/api/chatroom/join/<roomId> \\\n-H \"Authorization: Bearer <token>\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "6. Leave Chat Room",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NWIwZWVhMzZmYTVhYjY5M2YxMmM3MiIsInJvbGUiOiJNZW1iZXIiLCJpYXQiOjE3MzQwMjE2MzUsImV4cCI6MTczNDAyNTIzNX0.AMzqLYtFNFYKw4GyJt-1xLw4kH2I4xTCl9xYQ6O8K0M"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5001/api/chatroom/leave/675b112236fa5ab693f12c7e",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"chatroom",
+						"leave",
+						"675b112236fa5ab693f12c7e"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:5001/api/chatroom/leave/<roomId> \\\n-H \"Authorization: Bearer <token>\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "7. Delete Chat Room (Admin Only)",
+			"request": {
+				"method": "DELETE",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NWIxMDY5MzZmYTVhYjY5M2YxMmM3YSIsInJvbGUiOiJBZG1pbiIsImlhdCI6MTczNDAyMTg1MCwiZXhwIjoxNzM0MDI1NDUwfQ.q34qGbsBM_mCkQvgrzRFkku7z338Q29cyXA3CHuEzhw"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5001/api/chatroom/delete/675b112236fa5ab693f12c7e",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"chatroom",
+						"delete",
+						"675b112236fa5ab693f12c7e"
+					]
+				},
+				"description": "Generated from cURL: curl -X DELETE http://localhost:5001/api/chatroom/delete/<roomId> \\\n-H \"Authorization: Bearer <token>\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "8. Send a Message",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NWIwZWVhMzZmYTVhYjY5M2YxMmM3MiIsInJvbGUiOiJNZW1iZXIiLCJpYXQiOjE3MzQwMjIwOTYsImV4cCI6MTczNDAyNTY5Nn0.xFxFB6JOKpIad8vZdkisWspEgr13yrLUzazNTYPtuHs"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"roomId\": \"675b134e36fa5ab693f12c96\",\n  \"userId\": \"675b0eea36fa5ab693f12c72\",\n  \"text\": \"How are you doing?\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:5001/api/chatroom/message",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"chatroom",
+						"message"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:5001/api/chatroom/message \\\n-H \"Content-Type: application/json\" \\\n-H \"Authorization: Bearer <token>\" \\\n-d '{\n  \"roomId\": \"<ROOM_ID>\",\n  \"userId\": \"<USER_ID>\",\n  \"text\": \"Hello, World!\"\n}'\n"
+			},
+			"response": []
+		},
+		{
+			"name": "9. Get Chat History",
+			"request": {
+				"method": "GET",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY3NWIwZWVhMzZmYTVhYjY5M2YxMmM3MiIsInJvbGUiOiJNZW1iZXIiLCJpYXQiOjE3MzQwMjIwOTYsImV4cCI6MTczNDAyNTY5Nn0.xFxFB6JOKpIad8vZdkisWspEgr13yrLUzazNTYPtuHs"
+					}
+				],
+				"url": {
+					"raw": "http://localhost:5001/api/chatroom/history/675b134e36fa5ab693f12c96",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "5001",
+					"path": [
+						"api",
+						"chatroom",
+						"history",
+						"675b134e36fa5ab693f12c96"
+					]
+				},
+				"description": "Generated from cURL: curl -X GET http://localhost:5001/api/chatroom/history/<roomId> \\\n-H \"Authorization: Bearer <token>\"\n"
+			},
+			"response": []
+		},
+		{
+			"name": "https://real-time-chat-app-6vra.onrender.com/api/auth/signup",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"username\": \"amensink\",\n  \"email\": \"aishwarya@gmail.com\",\n  \"password\": \"Password@123\",\n  \"role\": \"Member\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "https://real-time-chat-app-6vra.onrender.com/api/auth/signup",
+					"protocol": "https",
+					"host": [
+						"real-time-chat-app-6vra",
+						"onrender",
+						"com"
+					],
+					"path": [
+						"api",
+						"auth",
+						"signup"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST https://real-time-chat-app-6vra.onrender.com/api/auth/signup \\\n-H \"Content-Type: application/json\" \\\n-d '{\n  \"username\": \"testuser\",\n  \"email\": \"testuser@example.com\",\n  \"password\": \"Password1!\",\n  \"role\": \"Member\"\n}'\n"
+			},
+			"response": []
+		}
+	]
+}
