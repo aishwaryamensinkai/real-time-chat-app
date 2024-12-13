@@ -2,7 +2,6 @@ import axios from "axios";
 
 const API = axios.create({
   baseURL: "https://real-time-chat-app-6vra.onrender.com/api",
-  withCredentials: true,
 });
 
 export const login = (data) => API.post("/auth/login", data);
