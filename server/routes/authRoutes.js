@@ -13,9 +13,6 @@ const validatePassword = (password) => {
 
 // Helper function to generate tokens
 const generateTokens = (user) => {
-  console.log("JWT_SECRET-----------", process.env.JWT_SECRET);
-  console.log("JWT_REFRESH_SECRET-----------", process.env.JWT_REFRESH_SECRET);
-
   const token = jwt.sign(
     { id: user._id, role: user.role },
     process.env.JWT_SECRET,
