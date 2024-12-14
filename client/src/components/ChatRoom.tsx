@@ -1,31 +1,37 @@
 import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { fetchMessages, addMessage } from "../store/slices/chatSlice";
+import {
+  fetchMessages,
+  addMessage,
+  sendMessage,
+} from "../store/slices/chatSlice";
 import { AppDispatch, RootState } from "../store";
 import { io, Socket } from "socket.io-client";
 
-const ChatRoom: React.FC = () => {
+export interface ChatRoomProps {
+  roomId: string;
+}
+
+export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
   const [message, setMessage] = useState("");
   const dispatch = useDispatch<AppDispatch>();
-  const { currentRoom, messages } = useSelector(
-    (state: RootState) => state.chat
-  );
+  const { messages } = useSelector((state: RootState) => state.chat);
   const { user, token } = useSelector((state: RootState) => state.auth);
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
-    if (currentRoom) {
-      dispatch(fetchMessages(currentRoom.id));
+    if (roomId) {
+      dispatch(fetchMessages(roomId));
     }
-  }, [currentRoom, dispatch]);
+  }, [roomId, dispatch]);
 
   useEffect(() => {
-    if (currentRoom && user && token) {
+    if (roomId && user && token) {
       const newSocket = io("https://real-time-chat-app-6vra.onrender.com", {
         query: { token },
       });
 
-      newSocket.emit("joinRoom", { roomId: currentRoom.id, userId: user.id });
+      newSocket.emit("joinRoom", { roomId, userId: user.id });
 
       newSocket.on("newMessage", (newMessage) => {
         dispatch(addMessage(newMessage));
@@ -35,29 +41,21 @@ const ChatRoom: React.FC = () => {
 
       return () => {
         newSocket.emit("leaveRoom", {
-          roomId: currentRoom.id,
+          roomId,
           userId: user.id,
         });
         newSocket.disconnect();
       };
     }
-  }, [currentRoom, user, token, dispatch]);
+  }, [roomId, user, token, dispatch]);
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim() && socket && currentRoom && user) {
-      socket.emit("sendMessage", {
-        roomId: currentRoom.id,
-        userId: user.id,
-        text: message,
-      });
+    if (message.trim() && roomId && user) {
+      dispatch(sendMessage({ roomId, text: message }));
       setMessage("");
     }
   };
-
-  if (!currentRoom) {
-    return <div>Please select a chat room</div>;
-  }
 
   return (
     <div className="flex flex-col h-full">
@@ -66,7 +64,9 @@ const ChatRoom: React.FC = () => {
           <div
             key={msg.id}
             className={`flex ${
-              msg.sender.id === user?.id?.toString() ? "justify-end" : "justify-start"
+              msg.sender.id === user?.id?.toString()
+                ? "justify-end"
+                : "justify-start"
             }`}
           >
             <div

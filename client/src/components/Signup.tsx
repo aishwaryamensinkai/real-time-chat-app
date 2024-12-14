@@ -38,7 +38,7 @@ const Signup: React.FC = () => {
       await dispatch(signup({ username, email, password, role })).unwrap();
       // console.log("Signup successful");
       setSignupSuccess(true); // Set signupSuccess to true after successful signup
-      toast.success("Signup successful! Redirecting to login.");
+      toast.success("Signup successful!");
     } catch (error: any) {
       console.error("Signup error:", error);
       if (typeof error === 'string') {

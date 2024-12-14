@@ -1,12 +1,12 @@
 export interface User {
-  id: string;
+  _id: string;
   username: string;
   email: string;
   role: 'Admin' | 'Member';
 }
 
 export interface ChatRoom {
-  id: string;
+  _id: string;
   name: string;
   is_private: boolean;
   created_by: string;
@@ -14,7 +14,7 @@ export interface ChatRoom {
 }
 
 export interface Message {
-  id: string;
+  _id: string;
   text: string;
   sender: User;
   room: string;
