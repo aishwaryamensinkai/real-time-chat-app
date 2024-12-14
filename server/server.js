@@ -43,6 +43,12 @@ app.get("/", (req, res) => res.send("Real-Time Chat Application API"));
 // Use error handling middleware
 app.use(errorMiddleware);
 
+// Helper function to get active users count
+const getActiveUsersCount = (roomId) => {
+  const room = io.sockets.adapter.rooms.get(roomId);
+  return room ? room.size : 0;
+};
+
 // Real-Time Communication with Socket.IO
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
@@ -62,6 +68,10 @@ io.on("connection", (socket) => {
 
       // Notify others in the room
       socket.to(roomId).emit("userJoined", { username: user.username });
+
+      // Send active users count
+      const activeUsersCount = getActiveUsersCount(roomId);
+      io.to(roomId).emit("activeUsers", activeUsersCount);
 
       // Optionally, send the chat history
       const messages = await Message.find({ room: roomId })
@@ -118,6 +128,10 @@ io.on("connection", (socket) => {
 
       // Notify others in the room
       socket.to(roomId).emit("userLeft", { username: user.username });
+
+      // Send updated active users count
+      const activeUsersCount = getActiveUsersCount(roomId);
+      io.to(roomId).emit("activeUsers", activeUsersCount);
     } catch (err) {
       console.error(err);
       socket.emit("error", { msg: "An error occurred while leaving the room" });
@@ -127,7 +141,13 @@ io.on("connection", (socket) => {
   // Disconnect
   socket.on("disconnect", () => {
     console.log("User disconnected:", socket.id);
-    // Optional: Handle user disconnection logic
+    // Update active users count for all rooms this socket was in
+    socket.rooms.forEach((roomId) => {
+      if (roomId !== socket.id) {
+        const activeUsersCount = getActiveUsersCount(roomId);
+        io.to(roomId).emit("activeUsers", activeUsersCount);
+      }
+    });
   });
 });
 
