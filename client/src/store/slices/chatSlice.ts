@@ -55,7 +55,7 @@ export const fetchRooms = createAsyncThunk(
   "chat/fetchRooms",
   async (_, { getState, rejectWithValue }) => {
     try {
-      console.log("Fetching rooms...");
+      // console.log("Fetching rooms...");
       const { auth } = getState() as { auth: { token: string } };
       const response = await axios.get(
         "https://real-time-chat-app-6vra.onrender.com/api/chatroom",
@@ -63,10 +63,10 @@ export const fetchRooms = createAsyncThunk(
           headers: { Authorization: `Bearer ${auth.token}` },
         }
       );
-      console.log("Rooms fetched successfully:", response.data);
+      // console.log("Rooms fetched successfully:", response.data);
       return response.data;
     } catch (error: any) {
-      console.error("Error fetching rooms:", error);
+      // console.error("Error fetching rooms:", error);
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch rooms"
       );
@@ -81,7 +81,7 @@ export const createRoom = createAsyncThunk(
     { getState, rejectWithValue }
   ) => {
     try {
-      console.log("Creating room with data:", roomData);
+      // console.log("Creating room with data:", roomData);
       const { auth } = getState() as { auth: { token: string } };
       const response = await axios.post(
         "https://real-time-chat-app-6vra.onrender.com/api/chatroom/create",
@@ -90,7 +90,7 @@ export const createRoom = createAsyncThunk(
           headers: { Authorization: `Bearer ${auth.token}` },
         }
       );
-      console.log("Room created successfully:", response.data.chatRoom);
+      // console.log("Room created successfully:", response.data.chatRoom);
       return response.data.chatRoom;
     } catch (error: any) {
       console.error("Error creating room:", error);
@@ -103,13 +103,11 @@ export const createRoom = createAsyncThunk(
 
 export const joinRoom = createAsyncThunk(
   "chat/joinRoom",
-  async (roomId: string, { getState, rejectWithValue }) => {
+  async (roomId: string, { getState, dispatch }) => {
     try {
-      console.log("Joining room with ID:", roomId);
-      if (!roomId || typeof roomId !== "string") {
-        throw new Error("Invalid Room ID");
-      }
-      const { auth } = getState() as { auth: { token: string } };
+      const { auth } = getState() as {
+        auth: { token: string; user: { _id: string; username: string } };
+      };
       const response = await axios.post(
         `https://real-time-chat-app-6vra.onrender.com/api/chatroom/join/${roomId}`,
         {},
@@ -117,26 +115,30 @@ export const joinRoom = createAsyncThunk(
           headers: { Authorization: `Bearer ${auth.token}` },
         }
       );
-      console.log("Joined room successfully:", response.data.chatRoom);
+
+      // Add notification for all users
+      dispatch(
+        addNotification({
+          message: `${auth.user.username} has joined the room "${response.data.chatRoom.name}"`,
+          timestamp: new Date().toISOString(),
+        })
+      );
+
       return response.data.chatRoom;
     } catch (error: any) {
       console.error("Error joining room:", error);
-      return rejectWithValue(
-        error.response?.data?.message || error.message || "Failed to join room"
-      );
+      throw error;
     }
   }
 );
 
 export const leaveRoom = createAsyncThunk(
   "chat/leaveRoom",
-  async (roomId: string, { getState, rejectWithValue }) => {
+  async (roomId: string, { getState, dispatch }) => {
     try {
-      console.log("Leaving room with ID:", roomId);
-      if (!roomId || typeof roomId !== "string") {
-        throw new Error("Invalid Room ID");
-      }
-      const { auth } = getState() as { auth: { token: string } };
+      const { auth } = getState() as {
+        auth: { token: string; user: { _id: string; username: string } };
+      };
       const response = await axios.post(
         `https://real-time-chat-app-6vra.onrender.com/api/chatroom/leave/${roomId}`,
         {},
@@ -144,41 +146,49 @@ export const leaveRoom = createAsyncThunk(
           headers: { Authorization: `Bearer ${auth.token}` },
         }
       );
-      console.log("Left room successfully:", response.data);
+
+      // Add notification for all users
+      dispatch(
+        addNotification({
+          message: `${auth.user.username} has left the room "${response.data.chatRoom.name}"`,
+          timestamp: new Date().toISOString(),
+        })
+      );
+
       return response.data;
     } catch (error: any) {
       console.error("Error leaving room:", error);
-      return rejectWithValue(
-        error.response?.data?.message || error.message || "Failed to leave room"
-      );
+      throw error;
     }
   }
 );
 
 export const deleteRoom = createAsyncThunk(
   "chat/deleteRoom",
-  async (roomId: string, { getState, rejectWithValue }) => {
+  async (roomId: string, { getState, dispatch }) => {
     try {
-      console.log("Deleting room with ID:", roomId);
-      if (!roomId || typeof roomId !== "string") {
-        throw new Error("Invalid Room ID");
-      }
-      const { auth } = getState() as { auth: { token: string } };
+      const { auth } = getState() as {
+        auth: { token: string; user: { username: string } };
+      };
       const response = await axios.delete(
         `https://real-time-chat-app-6vra.onrender.com/api/chatroom/delete/${roomId}`,
         {
           headers: { Authorization: `Bearer ${auth.token}` },
         }
       );
-      console.log("Deleted room successfully:", response.data);
+
+      // Add notification for all users
+      dispatch(
+        addNotification({
+          message: `${auth.user.username} has deleted the room "${response.data.name}"`,
+          timestamp: new Date().toISOString(),
+        })
+      );
+
       return response.data;
     } catch (error: any) {
       console.error("Error deleting room:", error);
-      return rejectWithValue(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to delete room"
-      );
+      throw error;
     }
   }
 );
@@ -187,7 +197,7 @@ export const fetchMessages = createAsyncThunk(
   "chat/fetchMessages",
   async (roomId: string, { getState, rejectWithValue }) => {
     try {
-      console.log("Fetching messages for room ID:", roomId);
+      // console.log("Fetching messages for room ID:", roomId);
       const { auth } = getState() as { auth: { token: string } };
       const response = await axios.get(
         `https://real-time-chat-app-6vra.onrender.com/api/chatroom/history/${roomId}`,
@@ -195,7 +205,7 @@ export const fetchMessages = createAsyncThunk(
           headers: { Authorization: `Bearer ${auth.token}` },
         }
       );
-      console.log("Messages fetched successfully:", response.data);
+      // console.log("Messages fetched successfully:", response.data);
       return response.data;
     } catch (error: any) {
       console.error("Error fetching messages:", error);
@@ -213,7 +223,7 @@ export const sendMessage = createAsyncThunk(
     { getState, rejectWithValue }
   ) => {
     try {
-      console.log("Sending message to room ID:", roomId);
+      // console.log("Sending message to room ID:", roomId);
       if (!roomId || !text) {
         throw new Error("Room ID and message text are required");
       }
@@ -225,7 +235,7 @@ export const sendMessage = createAsyncThunk(
         { roomId, userId: auth.user._id, text },
         { headers: { Authorization: `Bearer ${auth.token}` } }
       );
-      console.log("Message sent successfully:", response.data.message);
+      // console.log("Message sent successfully:", response.data.message);
       return response.data.message;
     } catch (error: any) {
       console.error("Error sending message:", error);
@@ -282,26 +292,26 @@ const chatSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(fetchRooms.pending, (state) => {
-        console.log("fetchRooms: pending");
+        // console.log("fetchRooms: pending");
         state.isLoading = true;
         state.error = null;
       })
       .addCase(fetchRooms.fulfilled, (state, action) => {
-        console.log("fetchRooms: fulfilled", action.payload);
+        // console.log("fetchRooms: fulfilled", action.payload);
         state.isLoading = false;
         state.rooms = action.payload;
       })
       .addCase(fetchRooms.rejected, (state, action) => {
-        console.log("fetchRooms: rejected", action.payload);
+        // console.log("fetchRooms: rejected", action.payload);
         state.isLoading = false;
         state.error = action.payload as string;
       })
       .addCase(createRoom.fulfilled, (state, action) => {
-        console.log("createRoom: fulfilled", action.payload);
+        // console.log("createRoom: fulfilled", action.payload);
         state.rooms.push(action.payload);
       })
       .addCase(joinRoom.fulfilled, (state, action) => {
-        console.log("joinRoom: fulfilled", action.payload);
+        // console.log("joinRoom: fulfilled", action.payload);
         if (action.payload && action.payload._id) {
           state.currentRoom = action.payload;
           const roomIndex = state.rooms.findIndex(
@@ -315,7 +325,7 @@ const chatSlice = createSlice({
         }
       })
       .addCase(leaveRoom.fulfilled, (state, action) => {
-        console.log("leaveRoom: fulfilled", action.payload);
+        // console.log("leaveRoom: fulfilled", action.payload);
         state.currentRoom = null;
         if (
           action.payload &&
@@ -331,30 +341,30 @@ const chatSlice = createSlice({
       })
       .addCase(deleteRoom.fulfilled, (state, action) => {
         console.log("deleteRoom: fulfilled", action.payload);
-        state.currentRoom = null;
-        if (action.payload && action.payload._id) {
-          state.rooms = state.rooms.filter(
-            (room) => room._id !== action.payload._id
-          );
+        if (state.currentRoom && state.currentRoom._id === action.payload._id) {
+          state.currentRoom = null;
         }
+        state.rooms = state.rooms.filter(
+          (room) => room._id !== action.payload._id
+        );
       })
       .addCase(fetchMessages.pending, (state) => {
-        console.log("fetchMessages: pending");
+        // console.log("fetchMessages: pending");
         state.isLoading = true;
         state.error = null;
       })
       .addCase(fetchMessages.fulfilled, (state, action) => {
-        console.log("fetchMessages: fulfilled", action.payload);
+        // console.log("fetchMessages: fulfilled", action.payload);
         state.isLoading = false;
         state.messages = action.payload;
       })
       .addCase(fetchMessages.rejected, (state, action) => {
-        console.log("fetchMessages: rejected", action.payload);
+        // console.log("fetchMessages: rejected", action.payload);
         state.isLoading = false;
         state.error = action.payload as string;
       })
       .addCase(sendMessage.fulfilled, (state, action) => {
-        console.log("sendMessage: fulfilled", action.payload);
+        // console.log("sendMessage: fulfilled", action.payload);
         state.messages.push(action.payload);
       });
   },
@@ -378,7 +388,8 @@ export const selectMessages = (state: RootState) => state.chat.messages;
 export const selectIsLoading = (state: RootState) => state.chat.isLoading;
 export const selectError = (state: RootState) => state.chat.error;
 export const selectActiveUsers = (state: RootState) => state.chat.activeUsers;
-export const selectNotifications = (state: RootState) => state.chat.notifications;
+export const selectNotifications = (state: RootState) =>
+  state.chat.notifications;
 
 // Reducer
 export default chatSlice.reducer;

@@ -8,29 +8,91 @@ import {
   deleteRoom,
   setCurrentRoom,
   addNotification,
+  clearNotifications,
 } from "../store/slices/chatSlice";
 import { logout } from "../store/slices/authSlice";
 import { AppDispatch, RootState } from "../store";
 import ChatRoom from "./ChatRoom";
 import Notifications from "./Notifications";
-import { EllipsisVerticalIcon } from "@heroicons/react/24/outline";
-import { Menu, Transition } from "@headlessui/react";
+import {
+  EllipsisVerticalIcon,
+  UserIcon,
+  PlusIcon,
+  XMarkIcon,
+} from "@heroicons/react/24/outline";
+import { Menu, Transition, Popover } from "@headlessui/react";
+import { BellIcon } from "@heroicons/react/24/outline";
+import { io, Socket } from "socket.io-client";
 
 const Dashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
-  const { rooms, currentRoom } = useSelector((state: RootState) => state.chat);
+  const { rooms, currentRoom, notifications } = useSelector(
+    (state: RootState) => state.chat
+  );
   const [newRoomName, setNewRoomName] = useState("");
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
     dispatch(fetchRooms());
   }, [dispatch]);
+
+  useEffect(() => {
+    const newSocket = io("https://real-time-chat-app-6vra.onrender.com");
+    setSocket(newSocket);
+
+    newSocket.on(
+      "roomDeleted",
+      (deletedRoom: { _id: string; name: string }) => {
+        dispatch(
+          addNotification({
+            message: `Room "${deletedRoom.name}" has been deleted`,
+            timestamp: new Date().toISOString(),
+          })
+        );
+        dispatch(fetchRooms());
+        if (currentRoom && currentRoom._id === deletedRoom._id) {
+          dispatch(setCurrentRoom(null));
+        }
+      }
+    );
+
+    newSocket.on(
+      "userJoinedRoom",
+      (data: { username: string; roomName: string }) => {
+        dispatch(
+          addNotification({
+            message: `${data.username} has joined the room "${data.roomName}"`,
+            timestamp: new Date().toISOString(),
+          })
+        );
+      }
+    );
+
+    newSocket.on(
+      "userLeftRoom",
+      (data: { username: string; roomName: string }) => {
+        dispatch(
+          addNotification({
+            message: `${data.username} has left the room "${data.roomName}"`,
+            timestamp: new Date().toISOString(),
+          })
+        );
+      }
+    );
+
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [dispatch, currentRoom]);
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
     if (newRoomName.trim()) {
       dispatch(createRoom({ name: newRoomName, is_private: false }));
       setNewRoomName("");
+      setShowCreateForm(false);
     }
   };
 
@@ -48,14 +110,6 @@ const Dashboard: React.FC = () => {
         dispatch(
           setCurrentRoom(rooms.find((room) => room._id === roomId) || null)
         );
-        dispatch(
-          addNotification({
-            message: `You joined ${
-              rooms.find((room) => room._id === roomId)?.name
-            }`,
-            timestamp: new Date().toISOString(),
-          })
-        );
       });
     }
   };
@@ -66,14 +120,6 @@ const Dashboard: React.FC = () => {
       if (currentRoom && currentRoom._id === roomId) {
         dispatch(setCurrentRoom(null));
       }
-      dispatch(
-        addNotification({
-          message: `You left ${
-            rooms.find((room) => room._id === roomId)?.name
-          }`,
-          timestamp: new Date().toISOString(),
-        })
-      );
     } else {
       console.error("Attempted to leave room with invalid roomId:", roomId);
     }
@@ -82,9 +128,6 @@ const Dashboard: React.FC = () => {
   const handleDeleteRoom = (roomId: string) => {
     if (roomId && user?.role === "Admin") {
       dispatch(deleteRoom(roomId));
-      if (currentRoom && currentRoom._id === roomId) {
-        dispatch(setCurrentRoom(null));
-      }
     } else {
       console.error(
         "Attempted to delete room with invalid roomId or insufficient permissions:",
@@ -95,6 +138,10 @@ const Dashboard: React.FC = () => {
 
   const handleLogout = () => {
     dispatch(logout());
+  };
+
+  const handleClearNotifications = () => {
+    dispatch(clearNotifications());
   };
 
   const isUserInRoom = (roomId: string): boolean => {
@@ -110,8 +157,146 @@ const Dashboard: React.FC = () => {
   return (
     <div className="flex h-screen">
       <div className="w-1/4 bg-gray-100 p-4 border-r flex flex-col">
-        <h2 className="text-xl font-bold mb-4">Chat Rooms</h2>
-        <Notifications />
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-bold">Chat Rooms</h2>
+          <div className="flex items-center">
+            {user.role === "Admin" && (
+              <Popover className="relative mr-2">
+                {({ open }) => (
+                  <>
+                    <Popover.Button
+                      className="p-1 rounded-full hover:bg-gray-200 focus:outline-none"
+                      aria-label="Create Room"
+                    >
+                      {showCreateForm ? (
+                        <XMarkIcon className="h-6 w-6 text-gray-600" />
+                      ) : (
+                        <PlusIcon className="h-6 w-6 text-gray-600" />
+                      )}
+                    </Popover.Button>
+                    <Transition
+                      as={Fragment}
+                      enter="transition ease-out duration-200"
+                      enterFrom="opacity-0 translate-y-1"
+                      enterTo="opacity-100 translate-y-0"
+                      leave="transition ease-in duration-150"
+                      leaveFrom="opacity-100 translate-y-0"
+                      leaveTo="opacity-0 translate-y-1"
+                    >
+                      <Popover.Panel className="absolute right-0 z-10 mt-2 w-64 transform px-4 sm:px-0">
+                        <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
+                          <div className="relative bg-white p-4">
+                            <form
+                              onSubmit={handleCreateRoom}
+                              className="space-y-2"
+                            >
+                              <input
+                                type="text"
+                                value={newRoomName}
+                                onChange={(e) => setNewRoomName(e.target.value)}
+                                placeholder="New room name"
+                                className="w-full px-3 py-2 border rounded-md"
+                              />
+                              <button
+                                type="submit"
+                                className="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                              >
+                                Create Room
+                              </button>
+                            </form>
+                          </div>
+                        </div>
+                      </Popover.Panel>
+                    </Transition>
+                  </>
+                )}
+              </Popover>
+            )}
+            <Popover className="relative">
+              {({ open }) => (
+                <>
+                  <Popover.Button className="relative p-1 rounded-full hover:bg-gray-200 focus:outline-none">
+                    <BellIcon
+                      className="h-5 w-5 text-gray-600"
+                      aria-hidden="true"
+                    />
+                    {notifications.length > 0 && (
+                      <span className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center text-xs font-bold text-white bg-red-500 rounded-full">
+                        {notifications.length}
+                      </span>
+                    )}
+                  </Popover.Button>
+                  <Transition
+                    as={Fragment}
+                    enter="transition ease-out duration-200"
+                    enterFrom="opacity-0 translate-y-1"
+                    enterTo="opacity-100 translate-y-0"
+                    leave="transition ease-in duration-150"
+                    leaveFrom="opacity-100 translate-y-0"
+                    leaveTo="opacity-0 translate-y-1"
+                  >
+                    <Popover.Panel className="absolute right-0 z-10 mt-2 w-60 transform px-4 sm:px-0">
+                      <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
+                        <div className="relative bg-white p-4">
+                          <Notifications
+                            notifications={notifications}
+                            handleClearNotifications={handleClearNotifications}
+                          />
+                        </div>
+                      </div>
+                    </Popover.Panel>
+                  </Transition>
+                </>
+              )}
+            </Popover>
+            <Popover className="relative ml-2">
+              {({ open }) => (
+                <>
+                  <Popover.Button className="relative p-1 rounded-full hover:bg-gray-200 focus:outline-none">
+                    <UserIcon
+                      className="h-5 w-5 text-gray-600"
+                      aria-hidden="true"
+                    />
+                  </Popover.Button>
+                  <Transition
+                    as={Fragment}
+                    enter="transition ease-out duration-200"
+                    enterFrom="opacity-0 translate-y-1"
+                    enterTo="opacity-100 translate-y-0"
+                    leave="transition ease-in duration-150"
+                    leaveFrom="opacity-100 translate-y-0"
+                    leaveTo="opacity-0 translate-y-1"
+                  >
+                    <Popover.Panel className="absolute right-0 z-10 mt-2 w-64 transform px-4 sm:px-0">
+                      <div className="overflow-hidden rounded-lg shadow-lg ring-1 ring-black ring-opacity-5">
+                        <div className="relative bg-white p-4">
+                          <div className="flex flex-col items-center">
+                            <UserIcon className="h-16 w-16 text-gray-400 mb-2" />
+                            <h3 className="text-lg font-medium">
+                              {user.username}
+                            </h3>
+                            <p className="text-sm text-gray-500">
+                              {user.email}
+                            </p>
+                            <p className="text-sm text-gray-500 capitalize">
+                              {user.role}
+                            </p>
+                            <button
+                              onClick={handleLogout}
+                              className="mt-4 w-full px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                            >
+                              Logout
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </Popover.Panel>
+                  </Transition>
+                </>
+              )}
+            </Popover>
+          </div>
+        </div>
         <ul className="space-y-2 flex-grow overflow-y-auto">
           {rooms.map((room) => (
             <li
@@ -238,27 +423,6 @@ const Dashboard: React.FC = () => {
             </li>
           ))}
         </ul>
-        <form onSubmit={handleCreateRoom} className="mt-4">
-          <input
-            type="text"
-            value={newRoomName}
-            onChange={(e) => setNewRoomName(e.target.value)}
-            placeholder="New room name"
-            className="w-full px-3 py-2 border rounded-md"
-          />
-          <button
-            type="submit"
-            className="mt-2 w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-          >
-            Create Room
-          </button>
-        </form>
-        <button
-          onClick={handleLogout}
-          className="mt-4 w-full px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600"
-        >
-          Logout
-        </button>
       </div>
       <div className="flex-1 flex flex-col">
         {currentRoom ? (

@@ -3,7 +3,7 @@ import axios from "axios";
 
 interface User {
   _id: number;
-  name: string;
+  username: string;
   email: string;
   role: 'Admin' | 'Member';
 }

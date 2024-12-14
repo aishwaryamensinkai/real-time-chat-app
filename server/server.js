@@ -68,6 +68,26 @@ io.on("connection", (socket) => {
 
       // Notify others in the room
       socket.to(roomId).emit("userJoined", { username: user.username });
+      io.emit("userJoinedRoom", {
+        username: user.username,
+        roomName: room.name,
+      });
+
+      socket.on("disconnect", async () => {
+        try {
+          socket.leave(room._id);
+          socket.emit("userLeft", {
+            username: user.username,
+            roomName: room.name,
+          });
+          io.emit("userLeftRoom", {
+            username: user.username,
+            roomName: room.name,
+          });
+        } catch (error) {
+          console.error(error);
+        }
+      });
 
       // Send active users count
       const activeUsersCount = getActiveUsersCount(roomId);
@@ -128,6 +148,7 @@ io.on("connection", (socket) => {
 
       // Notify others in the room
       socket.to(roomId).emit("userLeft", { username: user.username });
+      io.emit("userLeftRoom", { username: user.username, roomName: room.name });
 
       // Send updated active users count
       const activeUsersCount = getActiveUsersCount(roomId);
@@ -148,6 +169,33 @@ io.on("connection", (socket) => {
         io.to(roomId).emit("activeUsers", activeUsersCount);
       }
     });
+  });
+
+  socket.on("deleteRoom", async ({ roomId, userId }) => {
+    try {
+      const room = await ChatRoom.findById(roomId);
+      const user = await User.findById(userId);
+      if (!room || !user) {
+        socket.emit("error", { msg: "Room or user not found" });
+        return;
+      }
+
+      if (user.role !== "Admin") {
+        socket.emit("error", { msg: "Unauthorized to delete room" });
+        return;
+      }
+
+      await ChatRoom.findByIdAndDelete(roomId);
+      console.log(`${user.username} deleted room: ${room.name}`);
+
+      // Notify all users about the room deletion
+      io.emit("roomDeleted", { _id: room._id, name: room.name });
+    } catch (err) {
+      console.error(err);
+      socket.emit("error", {
+        msg: "An error occurred while deleting the room",
+      });
+    }
   });
 });
 
