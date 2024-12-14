@@ -14,14 +14,16 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   message: string | null;
+  isAuthenticated: boolean;
 }
 
 const initialState: AuthState = {
   user: null,
-  token: localStorage.getItem("token"),
+  token: null,
   isLoading: false,
   error: null,
   message: null,
+  isAuthenticated: false,
 };
 
 export const signup = createAsyncThunk(
@@ -52,7 +54,6 @@ export const login = createAsyncThunk(
         user
       );
       // console.log("Login API response:", response.data);
-      localStorage.setItem("token", response.data.token);
       return response.data;
     } catch (error: any) {
       // console.error("Login API error:", error.response?.data || error.message);
@@ -100,6 +101,28 @@ export const resetPassword = createAsyncThunk(
   }
 );
 
+export const checkAuthStatus = createAsyncThunk(
+  "auth/checkAuthStatus",
+  async (_, { getState, rejectWithValue }) => {
+    try {
+      const { auth } = getState() as { auth: AuthState };
+      if (!auth.token) {
+        return rejectWithValue("No token found");
+      }
+      const response = await axios.get(
+        "https://real-time-chat-app-6vra.onrender.com/api/auth/status",
+        {
+          headers: { Authorization: `Bearer ${auth.token}` },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.message || "Authentication failed");
+    }
+  }
+);
+
+
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -109,7 +132,7 @@ const authSlice = createSlice({
       state.token = null;
       state.isLoading = false;
       state.error = null;
-      localStorage.removeItem("token");
+      state.isAuthenticated = false;
     },
     clearError: (state) => {
       state.error = null;
@@ -139,10 +162,25 @@ const authSlice = createSlice({
         state.user = action.payload.user;
         state.token = action.payload.token;
         state.error = null;
+        state.isAuthenticated = true;
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      })
+      .addCase(checkAuthStatus.pending, (state) => {
+        state.isLoading = true;
+      })
+      .addCase(checkAuthStatus.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+      })
+      .addCase(checkAuthStatus.rejected, (state) => {
+        state.isLoading = false;
+        state.user = null;
+        state.token = null;
+        state.isAuthenticated = false;
       })
       .addCase(forgotPassword.pending, (state) => {
         state.isLoading = true;
@@ -169,7 +207,7 @@ const authSlice = createSlice({
       .addCase(resetPassword.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
-      });
+      })
   },
 });
 
