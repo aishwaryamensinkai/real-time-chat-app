@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const router = express.Router();
+const authMiddleware = require("../middleware/authMiddleware");
 
 // Helper function for password validation
 const validatePassword = (password) => {
@@ -179,12 +180,10 @@ router.post("/forgot-password", async (req, res) => {
       resetToken: resetToken,
     });
   } catch (error) {
-    res
-      .status(500)
-      .json({
-        message: "Error in password reset process",
-        error: error.message,
-      });
+    res.status(500).json({
+      message: "Error in password reset process",
+      error: error.message,
+    });
   }
 });
 
@@ -215,6 +214,22 @@ router.post("/reset-password", async (req, res) => {
     res
       .status(500)
       .json({ message: "Error resetting password", error: error.message });
+  }
+});
+
+// Add this new route for checking authentication status
+router.get("/status", authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select("-password");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.json({ user });
+  } catch (error) {
+    console.error("Error in auth status check:", error);
+    res
+      .status(500)
+      .json({ message: "Server error during authentication check" });
   }
 });
 
