@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
-import { login } from "../store/slices/authSlice";
+import { Link, useNavigate } from "react-router-dom";
+import { login, clearError } from "../store/slices/authSlice";
 import { AppDispatch, RootState } from "../store";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState("");
@@ -11,10 +13,30 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading, error } = useSelector((state: RootState) => state.auth);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(login({ email, password }));
+    try {
+      // console.log("Login attempt with email:", email);
+      await dispatch(login({ email, password })).unwrap();
+      // console.log("Login successful");
+      toast.success("Login successful!");
+      setTimeout(() => navigate("/dashboard"), 2000);
+    } catch (error: any) {
+      console.error("Login error:", error);
+      if (typeof error === 'string') {
+        toast.error(error);
+      } else {
+        toast.error("An unknown error occurred");
+      }
+    }
   };
 
   return (
@@ -110,8 +132,10 @@ const Login: React.FC = () => {
           </Link>
         </div>
       </div>
+      <ToastContainer position="top-right" autoClose={3000} />
     </div>
   );
 };
 
 export default Login;
+

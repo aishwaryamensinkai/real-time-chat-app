@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { Link } from "react-router-dom";
-import { signup } from "../store/slices/authSlice";
+import { Link, useNavigate } from "react-router-dom";
+import { signup, clearError } from "../store/slices/authSlice";
 import { AppDispatch, RootState } from "../store";
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Signup: React.FC = () => {
   const [username, setUsername] = useState("");
@@ -11,12 +13,40 @@ const Signup: React.FC = () => {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [role, setRole] = useState<"Admin" | "Member">("Member");
+  const [signupSuccess, setSignupSuccess] = useState(false); // Added state for signup success
   const dispatch = useDispatch<AppDispatch>();
   const { isLoading, error } = useSelector((state: RootState) => state.auth);
+  const navigate = useNavigate();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    return () => {
+      dispatch(clearError());
+    };
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (signupSuccess) {
+      const timer = setTimeout(() => navigate("/login"), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [signupSuccess, navigate]); // Added useEffect for navigation after signup
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    dispatch(signup({ username, email, password, role }));
+    try {
+      // console.log("Signup attempt with data:", { username, email, password, role });
+      await dispatch(signup({ username, email, password, role })).unwrap();
+      // console.log("Signup successful");
+      setSignupSuccess(true); // Set signupSuccess to true after successful signup
+      toast.success("Signup successful! Redirecting to login.");
+    } catch (error: any) {
+      console.error("Signup error:", error);
+      if (typeof error === 'string') {
+        toast.error(error);
+      } else {
+        toast.error("An unknown error occurred");
+      }
+    }
   };
 
   return (
@@ -141,9 +171,11 @@ const Signup: React.FC = () => {
             Sign in
           </Link>
         </div>
+        <ToastContainer position="top-right" autoClose={3000} />
       </div>
     </div>
   );
 };
 
 export default Signup;
+

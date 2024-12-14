@@ -28,14 +28,16 @@ export const signup = createAsyncThunk(
   "auth/signup",
   async (userData: { username: string; email: string; password: string; role: string }, { rejectWithValue }) => {
     try {
+      // console.log("Signup API call initiated with data:", userData);
       const response = await axios.post(
         "https://real-time-chat-app-6vra.onrender.com/api/auth/signup",
         userData
       );
-      localStorage.setItem("token", response.data.token);
+      // console.log("Signup API response:", response.data);
       return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.response.data.message);
+      // console.error("Signup API error:", error.response?.data || error.message);
+      return rejectWithValue(error.response?.data?.error || error.response?.data?.message || "Signup failed");
     }
   }
 );
@@ -44,14 +46,17 @@ export const login = createAsyncThunk(
   "auth/login",
   async (user: { email: string; password: string }, { rejectWithValue }) => {
     try {
+      // console.log("Login API call initiated with data:", user);
       const response = await axios.post(
         "https://real-time-chat-app-6vra.onrender.com/api/auth/login",
         user
       );
+      // console.log("Login API response:", response.data);
       localStorage.setItem("token", response.data.token);
       return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.response.data.message);
+      // console.error("Login API error:", error.response?.data || error.message);
+      return rejectWithValue(error.response?.data?.error || error.response?.data?.message || "Login failed");
     }
   }
 );
@@ -60,13 +65,16 @@ export const forgotPassword = createAsyncThunk(
   "auth/forgotPassword",
   async (email: string, { rejectWithValue }) => {
     try {
+      console.log("Forgot Password API call initiated with email:", email);
       const response = await axios.post(
         "https://real-time-chat-app-6vra.onrender.com/api/auth/forgot-password",
         { email }
       );
+      console.log("Forgot Password API response:", response.data);
       return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.response.data.message);
+      console.error("Forgot Password API error:", error.response?.data || error.message);
+      return rejectWithValue(error.response?.data?.message || "Forgot password request failed");
     }
   }
 );
@@ -78,13 +86,16 @@ export const resetPassword = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
+      console.log("Reset Password API call initiated with token:", token);
       const response = await axios.post(
         "https://real-time-chat-app-6vra.onrender.com/api/auth/reset-password",
         { token, newPassword }
       );
+      console.log("Reset Password API response:", response.data);
       return response.data;
     } catch (error: any) {
-      return rejectWithValue(error.response.data.message);
+      console.error("Reset Password API error:", error.response?.data || error.message);
+      return rejectWithValue(error.response?.data?.message || "Password reset failed");
     }
   }
 );
@@ -100,6 +111,9 @@ const authSlice = createSlice({
       state.error = null;
       localStorage.removeItem("token");
     },
+    clearError: (state) => {
+      state.error = null;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -109,8 +123,8 @@ const authSlice = createSlice({
       })
       .addCase(signup.fulfilled, (state, action) => {
         state.isLoading = false;
-        state.user = action.payload.user;
-        state.token = action.payload.token;
+        state.error = null;
+        state.message = "Signup successful. Please log in.";
       })
       .addCase(signup.rejected, (state, action) => {
         state.isLoading = false;
@@ -124,6 +138,7 @@ const authSlice = createSlice({
         state.isLoading = false;
         state.user = action.payload.user;
         state.token = action.payload.token;
+        state.error = null;
       })
       .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
@@ -158,6 +173,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout } = authSlice.actions;
+export const { logout, clearError } = authSlice.actions;
 export default authSlice.reducer;
 
