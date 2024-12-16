@@ -157,7 +157,7 @@ export const leaveRoom = createAsyncThunk(
 
       return response.data;
     } catch (error: any) {
-      console.error("Error leaving room:", error);
+      // console.error("Error leaving room:", error);
       throw error;
     }
   }
@@ -187,7 +187,7 @@ export const deleteRoom = createAsyncThunk(
 
       return response.data;
     } catch (error: any) {
-      console.error("Error deleting room:", error);
+      // console.error("Error deleting room:", error);
       throw error;
     }
   }
@@ -208,7 +208,7 @@ export const fetchMessages = createAsyncThunk(
       // console.log("Messages fetched successfully:", response.data);
       return response.data;
     } catch (error: any) {
-      console.error("Error fetching messages:", error);
+      // console.error("Error fetching messages:", error);
       return rejectWithValue(
         error.response?.data?.message || "Failed to fetch messages"
       );
@@ -238,7 +238,7 @@ export const sendMessage = createAsyncThunk(
       // console.log("Message sent successfully:", response.data.message);
       return response.data.message;
     } catch (error: any) {
-      console.error("Error sending message:", error);
+      // console.error("Error sending message:", error);
       return rejectWithValue(
         error.response?.data?.message ||
           error.message ||
@@ -254,18 +254,18 @@ const chatSlice = createSlice({
   initialState,
   reducers: {
     setCurrentRoom: (state, action: PayloadAction<ChatRoom | null>) => {
-      console.log("Setting current room:", action.payload);
+      // console.log("Setting current room:", action.payload);
       state.currentRoom = action.payload;
     },
     addMessage: (state, action: PayloadAction<Message>) => {
-      console.log("Adding new message:", action.payload);
+      // console.log("Adding new message:", action.payload);
       state.messages.push(action.payload);
     },
     addSystemMessage: (
       state,
       action: PayloadAction<{ text: string; timestamp: string }>
     ) => {
-      console.log("Adding new system message:", action.payload);
+      // console.log("Adding new system message:", action.payload);
       state.messages.push({
         _id: Date.now().toString(),
         sender: { _id: "system", username: "System" },
@@ -279,7 +279,7 @@ const chatSlice = createSlice({
       state.activeUsers = action.payload;
     },
     clearMessages: (state) => {
-      console.log("Clearing all messages");
+      // console.log("Clearing all messages");
       state.messages = [];
     },
     addNotification: (state, action: PayloadAction<Notification>) => {
@@ -340,7 +340,7 @@ const chatSlice = createSlice({
         }
       })
       .addCase(deleteRoom.fulfilled, (state, action) => {
-        console.log("deleteRoom: fulfilled", action.payload);
+        // console.log("deleteRoom: fulfilled", action.payload);
         if (state.currentRoom && state.currentRoom._id === action.payload._id) {
           state.currentRoom = null;
         }

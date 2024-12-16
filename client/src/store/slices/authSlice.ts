@@ -71,10 +71,10 @@ export const forgotPassword = createAsyncThunk(
         "https://real-time-chat-app-6vra.onrender.com/api/auth/forgot-password",
         { email }
       );
-      console.log("Forgot Password API response:", response.data);
+      // console.log("Forgot Password API response:", response.data);
       return response.data;
     } catch (error: any) {
-      console.error("Forgot Password API error:", error.response?.data || error.message);
+      // console.error("Forgot Password API error:", error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || "Forgot password request failed");
     }
   }
@@ -87,15 +87,15 @@ export const resetPassword = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      console.log("Reset Password API call initiated with token:", token);
+      // console.log("Reset Password API call initiated with token:", token);
       const response = await axios.post(
         "https://real-time-chat-app-6vra.onrender.com/api/auth/reset-password",
         { token, newPassword }
       );
-      console.log("Reset Password API response:", response.data);
+      // console.log("Reset Password API response:", response.data);
       return response.data;
     } catch (error: any) {
-      console.error("Reset Password API error:", error.response?.data || error.message);
+      // console.error("Reset Password API error:", error.response?.data || error.message);
       return rejectWithValue(error.response?.data?.message || "Password reset failed");
     }
   }
