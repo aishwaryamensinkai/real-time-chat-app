@@ -6,6 +6,7 @@ import {
   sendMessage,
   addSystemMessage,
   setActiveUsers,
+  addNotification,
 } from "../store/slices/chatSlice";
 import { AppDispatch, RootState } from "../store";
 import { io, Socket } from "socket.io-client";
@@ -36,6 +37,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
     (state: RootState) => state.chat
   );
   const { user, token } = useSelector((state: RootState) => state.auth);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [socket, setSocket] = useState<Socket | null>(null);
 
   useEffect(() => {
@@ -56,23 +58,41 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
         dispatch(addMessage(newMessage));
       });
 
-      newSocket.on("userJoinedRoom", (joinedUser: User) => {
-        dispatch(
-          addSystemMessage({
-            text: `${joinedUser.username} has joined the room`,
-            timestamp: new Date().toISOString(),
-          })
-        );
-      });
+      newSocket.on(
+        "userJoinedRoom",
+        (data: { username: string; roomName: string }) => {
+          dispatch(
+            addSystemMessage({
+              text: `${data.username} has joined the room`,
+              timestamp: new Date().toISOString(),
+            })
+          );
+          dispatch(
+            addNotification({
+              message: `${data.username} has joined the room "${data.roomName}"`,
+              timestamp: new Date().toISOString(),
+            })
+          );
+        }
+      );
 
-      newSocket.on("userLeftRoom", (leftUser: User) => {
-        dispatch(
-          addSystemMessage({
-            text: `${leftUser.username} has left the room`,
-            timestamp: new Date().toISOString(),
-          })
-        );
-      });
+      newSocket.on(
+        "userLeftRoom",
+        (data: { username: string; roomName: string }) => {
+          dispatch(
+            addSystemMessage({
+              text: `${data.username} has left the room`,
+              timestamp: new Date().toISOString(),
+            })
+          );
+          dispatch(
+            addNotification({
+              message: `${data.username} has left the room "${data.roomName}"`,
+              timestamp: new Date().toISOString(),
+            })
+          );
+        }
+      );
 
       newSocket.on("activeUsers", (count: number) => {
         dispatch(setActiveUsers(count));
@@ -86,6 +106,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
             roomId,
             userId: user._id,
           });
+          newSocket.off("newMessage");
           newSocket.off("userJoinedRoom");
           newSocket.off("userLeftRoom");
           newSocket.off("activeUsers");

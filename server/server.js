@@ -76,6 +76,11 @@ io.on("connection", (socket) => {
         roomName: room.name,
       });
 
+      // Send active users count
+      const activeUsersCount = getActiveUsersCount(roomId);
+      io.to(roomId).emit("activeUsers", activeUsersCount);
+
+      // Handle user disconnection
       socket.on("disconnect", async () => {
         try {
           socket.leave(room._id);
@@ -87,14 +92,14 @@ io.on("connection", (socket) => {
             username: user.username,
             roomName: room.name,
           });
+
+          // Update active users count when a user disconnects
+          const updatedActiveUsersCount = getActiveUsersCount(roomId);
+          io.to(roomId).emit("activeUsers", updatedActiveUsersCount);
         } catch (error) {
           console.error(error);
         }
       });
-
-      // Send active users count
-      const activeUsersCount = getActiveUsersCount(roomId);
-      io.to(roomId).emit("activeUsers", activeUsersCount);
 
       // Optionally, send the chat history
       const messages = await Message.find({ room: roomId })
