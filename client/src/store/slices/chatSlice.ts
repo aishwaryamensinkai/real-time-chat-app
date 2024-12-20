@@ -150,7 +150,7 @@ export const leaveRoom = createAsyncThunk(
       // Add notification for all users
       dispatch(
         addNotification({
-          message: `${auth.user.username} has left the room "${response.data.chatRoom.name}"`,
+          message: `${auth.user.username} has exited from the room ${response.data.chatRoom.name}"`,
           timestamp: new Date().toISOString(),
         })
       );

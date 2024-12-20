@@ -24,6 +24,7 @@ import {
 import { Menu, Transition, Popover } from "@headlessui/react";
 import { BellIcon } from "@heroicons/react/24/outline";
 import { io, Socket } from "socket.io-client";
+import { toast } from "react-toastify";
 
 const Dashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -59,29 +60,29 @@ const Dashboard: React.FC = () => {
       }
     );
 
-    newSocket.on(
-      "userJoinedRoom",
-      (data: { username: string; roomName: string }) => {
-        dispatch(
-          addNotification({
-            message: `${data.username} has joined the room "${data.roomName}"`,
-            timestamp: new Date().toISOString(),
-          })
-        );
-      }
-    );
+    // newSocket.on(
+    //   "userJoinedRoom",
+    //   (data: { username: string; roomName: string }) => {
+    //     dispatch(
+    //       addNotification({
+    //         message: `${data.username} has joined the room "${data.roomName}"`,
+    //         timestamp: new Date().toISOString(),
+    //       })
+    //     );
+    //   }
+    // );
 
-    newSocket.on(
-      "userLeftRoom",
-      (data: { username: string; roomName: string }) => {
-        dispatch(
-          addNotification({
-            message: `${data.username} has left the room "${data.roomName}"`,
-            timestamp: new Date().toISOString(),
-          })
-        );
-      }
-    );
+    // newSocket.on(
+    //   "userLeftRoom",
+    //   (data: { username: string; roomName: string }) => {
+    //     dispatch(
+    //       addNotification({
+    //         message: `${data.username} has left the room "${data.roomName}"`,
+    //         timestamp: new Date().toISOString(),
+    //       })
+    //     );
+    //   }
+    // );
 
     return () => {
       newSocket.disconnect();
@@ -123,6 +124,7 @@ const Dashboard: React.FC = () => {
       }
     } else {
       console.error("Attempted to leave room with invalid roomId:", roomId);
+      toast.error("Failed to leave room");
     }
   };
 
@@ -134,6 +136,7 @@ const Dashboard: React.FC = () => {
         "Attempted to delete room with invalid roomId or insufficient permissions:",
         roomId
       );
+      toast.error("Failed to delete room");
     }
   };
 
