@@ -25,6 +25,7 @@ import { Menu, Transition, Popover } from "@headlessui/react";
 import { BellIcon } from "@heroicons/react/24/outline";
 import { io, Socket } from "socket.io-client";
 import { toast } from "react-toastify";
+import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
 
 const Dashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -35,6 +36,11 @@ const Dashboard: React.FC = () => {
   const [newRoomName, setNewRoomName] = useState("");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [sortBy, setSortBy] = useState<{
+    field: "name" | "participants";
+    order: "asc" | "desc";
+  }>({ field: "name", order: "asc" });
 
   useEffect(() => {
     dispatch(fetchRooms());
@@ -153,6 +159,22 @@ const Dashboard: React.FC = () => {
     const room = rooms.find((room) => room._id === roomId);
     return room ? room.participants.includes(user._id.toString()) : false;
   };
+
+  const filteredAndSortedRooms = rooms
+    .filter((room) =>
+      room.name.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      if (sortBy.field === "name") {
+        return sortBy.order === "asc"
+          ? a.name.localeCompare(b.name)
+          : b.name.localeCompare(a.name);
+      } else {
+        return sortBy.order === "asc"
+          ? a.participants.length - b.participants.length
+          : b.participants.length - a.participants.length;
+      }
+    });
 
   if (!user) {
     return <div>Loading...</div>;
@@ -301,8 +323,41 @@ const Dashboard: React.FC = () => {
             </Popover>
           </div>
         </div>
+        <div className="mb-4">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search rooms..."
+              className="w-full pl-10 pr-4 py-2 border rounded-md"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          </div>
+        </div>
+        <div className="mb-4">
+          Sort by:
+          <select
+            className="w-full p-2 border rounded-md"
+            value={`${sortBy.field}-${sortBy.order}`}
+            onChange={(e) => {
+              const [field, order] = e.target.value.split("-");
+              setSortBy({
+                field: field as "name" | "participants",
+                order: order as "asc" | "desc",
+              });
+            }}
+          >
+            <option value="name-asc">Name (A-Z)</option>
+            <option value="name-desc">Name (Z-A)</option>
+            <option value="participants-desc">
+              Participants (High to Low)
+            </option>
+            <option value="participants-asc">Participants (Low to High)</option>
+          </select>
+        </div>
         <ul className="space-y-2 flex-grow overflow-y-auto">
-          {rooms.map((room) => (
+          {filteredAndSortedRooms.map((room) => (
             <li
               key={room._id}
               className={`flex justify-between items-center p-2 rounded ${
