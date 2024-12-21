@@ -2,7 +2,7 @@ export interface User {
   _id: string;
   username: string;
   email: string;
-  role: 'Admin' | 'Member';
+  role: "Admin" | "Member";
 }
 
 export interface ChatRoom {
@@ -10,6 +10,7 @@ export interface ChatRoom {
   name: string;
   is_private: boolean;
   created_by: string;
+  created_on: Date;
   participants: string[];
 }
 

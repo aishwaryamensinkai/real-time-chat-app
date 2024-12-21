@@ -13,6 +13,7 @@ interface ChatRoom {
   name: string;
   is_private: boolean;
   created_by: string;
+  created_on: Date;
   participants: string[];
 }
 
@@ -119,7 +120,7 @@ export const joinRoom = createAsyncThunk(
       // Add notification for all users
       dispatch(
         addNotification({
-          message: `${auth.user.username} has joined the room "${response.data.chatRoom.name}"`,
+          message: `${auth.user.username} has joined the room ${response.data.chatRoom.name}`,
           timestamp: new Date().toISOString(),
         })
       );

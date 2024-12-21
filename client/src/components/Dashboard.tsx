@@ -20,13 +20,24 @@ import {
   UserIcon,
   PlusIcon,
   XMarkIcon,
+  MagnifyingGlassIcon,
+  CalendarIcon,
 } from "@heroicons/react/24/outline";
 import { Menu, Transition, Popover } from "@headlessui/react";
 import { BellIcon } from "@heroicons/react/24/outline";
 import { io, Socket } from "socket.io-client";
 import { toast } from "react-toastify";
-import { MagnifyingGlassIcon } from "@heroicons/react/24/outline";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
+interface IChatRoom {
+  _id: string;
+  name: string;
+  is_private: boolean;
+  created_by: string;
+  created_on: Date;
+  participants: string[];
+}
 const Dashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -38,9 +49,10 @@ const Dashboard: React.FC = () => {
   const [socket, setSocket] = useState<Socket | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [sortBy, setSortBy] = useState<{
-    field: "name" | "participants";
+    field: "name" | "participants" | "created_on";
     order: "asc" | "desc";
   }>({ field: "name", order: "asc" });
+  const [dateFilter, setDateFilter] = useState<Date | null>(null);
 
   useEffect(() => {
     dispatch(fetchRooms());
@@ -161,18 +173,27 @@ const Dashboard: React.FC = () => {
   };
 
   const filteredAndSortedRooms = rooms
-    .filter((room) =>
+    .filter((room: IChatRoom) =>
       room.name.toLowerCase().includes(searchTerm.toLowerCase())
     )
-    .sort((a, b) => {
+    .filter((room: IChatRoom) => {
+      if (!dateFilter) return true;
+      const roomDate = new Date(room.created_on);
+      return roomDate.toDateString() === dateFilter.toDateString();
+    })
+    .sort((a: IChatRoom, b: IChatRoom) => {
       if (sortBy.field === "name") {
         return sortBy.order === "asc"
           ? a.name.localeCompare(b.name)
           : b.name.localeCompare(a.name);
-      } else {
+      } else if (sortBy.field === "participants") {
         return sortBy.order === "asc"
           ? a.participants.length - b.participants.length
           : b.participants.length - a.participants.length;
+      } else {
+        return sortBy.order === "asc"
+          ? new Date(a.created_on).getTime() - new Date(b.created_on).getTime()
+          : new Date(b.created_on).getTime() - new Date(a.created_on).getTime();
       }
     });
 
@@ -328,33 +349,52 @@ const Dashboard: React.FC = () => {
             <input
               type="text"
               placeholder="Search rooms..."
-              className="w-full pl-10 pr-4 py-2 border rounded-md"
+              className="w-full pl-10 pr-4 py-2 border rounded-md p-1.5 text-xs"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
             <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
           </div>
         </div>
-        <div className="mb-4">
-          Sort by:
-          <select
-            className="w-full p-2 border rounded-md"
-            value={`${sortBy.field}-${sortBy.order}`}
-            onChange={(e) => {
-              const [field, order] = e.target.value.split("-");
-              setSortBy({
-                field: field as "name" | "participants",
-                order: order as "asc" | "desc",
-              });
-            }}
-          >
-            <option value="name-asc">Name (A-Z)</option>
-            <option value="name-desc">Name (Z-A)</option>
-            <option value="participants-desc">
-              Participants (High to Low)
-            </option>
-            <option value="participants-asc">Participants (Low to High)</option>
-          </select>
+        <div className="mb-4 flex space-x-1">
+          <div className="flex-1">
+            <select
+              className="w-full p-1.5 border rounded-md text-xs"
+              value={`${sortBy.field}-${sortBy.order}`}
+              onChange={(e) => {
+                const [field, order] = e.target.value.split("-");
+                setSortBy({
+                  field: field as "name" | "participants" | "created_on",
+                  order: order as "asc" | "desc",
+                });
+              }}
+            >
+              <option value="name-asc">Name (A-Z)</option>
+              <option value="name-desc">Name (Z-A)</option>
+              <option value="participants-desc">
+                Participants (High to Low)
+              </option>
+              <option value="participants-asc">
+                Participants (Low to High)
+              </option>
+              <option value="created_on-desc">
+                Creation Date (Newest First)
+              </option>
+              <option value="created_on-asc">
+                Creation Date (Oldest First)
+              </option>
+            </select>
+          </div>
+
+          <div className="flex-1 relative">
+            <DatePicker
+              selected={dateFilter}
+              onChange={(date: Date | null) => setDateFilter(date)}
+              placeholderText="Filter by creation date"
+              className="w-full pl-8 pr-2 py-1.5 border rounded-md text-xs"
+            />
+            <CalendarIcon className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          </div>
         </div>
         <ul className="space-y-2 flex-grow overflow-y-auto">
           {filteredAndSortedRooms.map((room) => (
