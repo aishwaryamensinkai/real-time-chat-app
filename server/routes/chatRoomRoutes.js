@@ -179,4 +179,21 @@ router.get("/history/:roomId", authMiddleware, async (req, res) => {
   }
 });
 
+// Get Participants of a Chat Room
+router.get("/participants/:id", authMiddleware, async (req, res) => {
+  const roomId = req.params.id;
+
+  try {
+    const room = await ChatRoom.findById(roomId).populate(
+      "participants",
+      "username email"
+    );
+    if (!room) return res.status(404).json({ msg: "Chat room not found" });
+
+    res.json(room.participants);
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+});
+
 module.exports = router;
