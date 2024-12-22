@@ -179,4 +179,43 @@ router.get("/history/:roomId", authMiddleware, async (req, res) => {
   }
 });
 
+// Get Room Participants
+router.get("/participants/:id", authMiddleware, async (req, res) => {
+  const roomId = req.params.id;
+
+  try {
+    const room = await ChatRoom.findById(roomId).populate(
+      "participants",
+      "username email"
+    );
+    if (!room) return res.status(404).json({ msg: "Chat room not found" });
+
+    res.json(room.participants);
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+});
+
+// Remove Participant (Admin Only)
+router.post("/remove-participant", authMiddleware, async (req, res) => {
+  const { roomId, userId } = req.body;
+
+  if (req.user.role !== "Admin")
+    return res.status(403).json({ msg: "Access denied" });
+
+  try {
+    const room = await ChatRoom.findById(roomId);
+    if (!room) return res.status(404).json({ msg: "Chat room not found" });
+
+    room.participants = room.participants.filter(
+      (participant) => participant.toString() !== userId
+    );
+    await room.save();
+
+    res.json({ msg: "Participant removed", chatRoom: room });
+  } catch (err) {
+    res.status(500).json({ msg: "Server error", error: err.message });
+  }
+});
+
 module.exports = router;
