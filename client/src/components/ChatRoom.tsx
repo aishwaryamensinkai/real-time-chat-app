@@ -9,6 +9,8 @@ import {
   addNotification,
   fetchParticipants,
   selectParticipants,
+  setCurrentRoom,
+  removeMember,
 } from "../store/slices/chatSlice";
 import { AppDispatch, RootState } from "../store";
 import { io, Socket } from "socket.io-client";
@@ -104,6 +106,28 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
         dispatch(setActiveUsers(count));
       });
 
+      newSocket.on("memberRemoved", ({ removedUserId, adminUsername }) => {
+        dispatch(
+          addSystemMessage({
+            text: `${adminUsername} removed a member from the room`,
+            timestamp: new Date().toISOString(),
+          })
+        );
+        dispatch(fetchParticipants(roomId));
+      });
+
+      newSocket.on("youWereRemoved", ({ roomId, roomName }) => {
+        dispatch(
+          addNotification({
+            message: `You were removed from the room "${roomName}"`,
+            timestamp: new Date().toISOString(),
+          })
+        );
+        if (currentRoom && currentRoom._id === roomId) {
+          dispatch(setCurrentRoom(null));
+        }
+      });
+
       setSocket(newSocket);
 
       return () => {
@@ -116,6 +140,8 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
           newSocket.off("userJoinedRoom");
           newSocket.off("userLeftRoom");
           newSocket.off("activeUsers");
+          newSocket.off("memberRemoved");
+          newSocket.off("youWereRemoved");
           newSocket.disconnect();
         }
       };
@@ -193,6 +219,17 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
     ));
   };
 
+  const handleRemoveMember = (userId: string) => {
+    if (currentRoom && socket) {
+      dispatch(removeMember({ roomId: currentRoom._id, userId }));
+      socket.emit("memberRemoved", {
+        roomId: currentRoom._id,
+        removedUserId: userId,
+        adminUsername: user?.username,
+      });
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       <div className="bg-gray-200 p-4 flex justify-between items-center">
@@ -203,7 +240,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
           </span>
           <button
             onClick={() => setShowParticipants(true)}
-            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg shadow hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-700 focus:ring-opacity-50 transition duration-150 ease-in-out"
           >
             View Participants
           </button>

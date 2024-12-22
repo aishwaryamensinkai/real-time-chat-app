@@ -12,6 +12,7 @@ interface Participant {
   _id: string;
   username: string;
   email: string;
+  role: string;
 }
 
 interface ChatRoom {
@@ -278,6 +279,30 @@ export const fetchParticipants = createAsyncThunk(
   }
 );
 
+export const removeMember = createAsyncThunk(
+  "chat/removeMember",
+  async (
+    { roomId, userId }: { roomId: string; userId: string },
+    { getState, rejectWithValue }
+  ) => {
+    try {
+      const { auth } = getState() as { auth: { token: string } };
+      const response = await axios.post(
+        `https://real-time-chat-app-6vra.onrender.com/api/chatroom/remove-member/${roomId}/${userId}`,
+        {},
+        {
+          headers: { Authorization: `Bearer ${auth.token}` },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to remove member"
+      );
+    }
+  }
+);
+
 // Slice
 const chatSlice = createSlice({
   name: "chat",
@@ -399,6 +424,18 @@ const chatSlice = createSlice({
       })
       .addCase(fetchParticipants.fulfilled, (state, action) => {
         state.participants = action.payload;
+      })
+      .addCase(removeMember.fulfilled, (state, action) => {
+        if (
+          state.currentRoom &&
+          state.currentRoom._id === action.payload.room._id
+        ) {
+          state.currentRoom = action.payload.room;
+        }
+        state.participants = state.participants.filter(
+          (participant) =>
+            !action.payload.room.participants.includes(participant._id)
+        );
       });
   },
 });
