@@ -186,7 +186,7 @@ router.get("/participants/:id", authMiddleware, async (req, res) => {
   try {
     const room = await ChatRoom.findById(roomId).populate(
       "participants",
-      "username email"
+      "username email role"
     );
     if (!room) return res.status(404).json({ msg: "Chat room not found" });
 
