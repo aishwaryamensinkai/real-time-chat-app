@@ -205,31 +205,7 @@ io.on("connection", (socket) => {
       });
     }
   });
-
-  socket.on(
-    "memberRemoved",
-    async ({ roomId, removedUserId, adminUsername }) => {
-      try {
-        const room = await ChatRoom.findById(roomId);
-        if (room) {
-          io.to(roomId).emit("memberRemoved", { removedUserId, adminUsername });
-
-          // Notify the removed user
-          const removedUserSocket = Object.keys(io.sockets.sockets).find(
-            (socketId) => io.sockets.sockets[socketId].userId === removedUserId
-          );
-          if (removedUserSocket) {
-            io.to(removedUserSocket).emit("youWereRemoved", {
-              roomId,
-              roomName: room.name,
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error in memberRemoved event:", error);
-      }
-    }
-  );
+  
 });
 
 // Start the server

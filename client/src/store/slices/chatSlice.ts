@@ -8,13 +8,6 @@ interface User {
   username: string;
 }
 
-interface Participant {
-  _id: string;
-  username: string;
-  email: string;
-  role: string;
-}
-
 interface ChatRoom {
   _id: string;
   name: string;
@@ -45,7 +38,6 @@ interface ChatState {
   error: string | null;
   activeUsers: number;
   notifications: Notification[];
-  participants: Participant[];
 }
 
 // Initial state
@@ -57,7 +49,6 @@ const initialState: ChatState = {
   error: null,
   activeUsers: 0,
   notifications: [],
-  participants: [],
 };
 
 // Async thunks
@@ -258,51 +249,6 @@ export const sendMessage = createAsyncThunk(
   }
 );
 
-export const fetchParticipants = createAsyncThunk(
-  "chat/fetchParticipants",
-  async (roomId: string, { getState, rejectWithValue }) => {
-    try {
-      const { auth } = getState() as { auth: { token: string } };
-      const response = await axios.get(
-        `https://real-time-chat-app-6vra.onrender.com/api/chatroom/participants/${roomId}`,
-        {
-          headers: { Authorization: `Bearer ${auth.token}` },
-        }
-      );
-      console.log("Participants fetched successfully:", response.data);
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch participants"
-      );
-    }
-  }
-);
-
-export const removeMember = createAsyncThunk(
-  "chat/removeMember",
-  async (
-    { roomId, userId }: { roomId: string; userId: string },
-    { getState, rejectWithValue }
-  ) => {
-    try {
-      const { auth } = getState() as { auth: { token: string } };
-      const response = await axios.post(
-        `https://real-time-chat-app-6vra.onrender.com/api/chatroom/remove-member/${roomId}/${userId}`,
-        {},
-        {
-          headers: { Authorization: `Bearer ${auth.token}` },
-        }
-      );
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to remove member"
-      );
-    }
-  }
-);
-
 // Slice
 const chatSlice = createSlice({
   name: "chat",
@@ -421,21 +367,6 @@ const chatSlice = createSlice({
       .addCase(sendMessage.fulfilled, (state, action) => {
         // console.log("sendMessage: fulfilled", action.payload);
         state.messages.push(action.payload);
-      })
-      .addCase(fetchParticipants.fulfilled, (state, action) => {
-        state.participants = action.payload;
-      })
-      .addCase(removeMember.fulfilled, (state, action) => {
-        if (
-          state.currentRoom &&
-          state.currentRoom._id === action.payload.room._id
-        ) {
-          state.currentRoom = action.payload.room;
-        }
-        state.participants = state.participants.filter(
-          (participant) =>
-            !action.payload.room.participants.includes(participant._id)
-        );
       });
   },
 });
@@ -460,7 +391,6 @@ export const selectError = (state: RootState) => state.chat.error;
 export const selectActiveUsers = (state: RootState) => state.chat.activeUsers;
 export const selectNotifications = (state: RootState) =>
   state.chat.notifications;
-export const selectParticipants = (state: RootState) => state.chat.participants;
 
 // Reducer
 export default chatSlice.reducer;
