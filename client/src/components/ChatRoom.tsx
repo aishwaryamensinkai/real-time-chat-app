@@ -7,11 +7,14 @@ import {
   addSystemMessage,
   setActiveUsers,
   addNotification,
+  fetchParticipants,
+  selectParticipants,
 } from "../store/slices/chatSlice";
 import { AppDispatch, RootState } from "../store";
 import { io, Socket } from "socket.io-client";
 import { formatDate } from "../utils/dateFormatter";
-
+import { Dialog, Transition } from "@headlessui/react";
+import { XMarkIcon } from "@heroicons/react/24/outline";
 export interface ChatRoomProps {
   roomId: string;
 }
@@ -39,10 +42,13 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
   const { user, token } = useSelector((state: RootState) => state.auth);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [showParticipants, setShowParticipants] = useState(false);
+  const participants = useSelector(selectParticipants);
 
   useEffect(() => {
     if (roomId) {
       dispatch(fetchMessages(roomId));
+      dispatch(fetchParticipants(roomId));
     }
   }, [roomId, dispatch]);
 
@@ -191,9 +197,17 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
     <div className="flex flex-col h-full">
       <div className="bg-gray-200 p-4 flex justify-between items-center">
         <h2 className="text-xl font-bold">{currentRoom?.name || "Unknown"}</h2>
-        <span className="text-sm font-semibold">
-          Active Users: {activeUsers}
-        </span>
+        <div className="flex items-center space-x-4">
+          <span className="text-sm font-semibold">
+            Active Users: {activeUsers}
+          </span>
+          <button
+            onClick={() => setShowParticipants(true)}
+            className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            View Participants
+          </button>
+        </div>
       </div>
       <div className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.length === 0 ? (
@@ -206,6 +220,88 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
           renderMessages()
         )}
       </div>
+      <Transition.Root show={showParticipants} as={React.Fragment}>
+        <Dialog
+          as="div"
+          className="relative z-10"
+          onClose={setShowParticipants}
+        >
+          <Transition.Child
+            as={React.Fragment}
+            enter="ease-in-out duration-500"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in-out duration-500"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-hidden">
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="pointer-events-none fixed inset-y-0 right-0 flex max-w-full pl-10">
+                <Transition.Child
+                  as={React.Fragment}
+                  enter="transform transition ease-in-out duration-500 sm:duration-700"
+                  enterFrom="translate-x-full"
+                  enterTo="translate-x-0"
+                  leave="transform transition ease-in-out duration-500 sm:duration-700"
+                  leaveFrom="translate-x-0"
+                  leaveTo="translate-x-full"
+                >
+                  <Dialog.Panel className="pointer-events-auto relative w-screen max-w-md">
+                    <div className="flex h-full flex-col overflow-y-scroll bg-white py-6 shadow-xl">
+                      <div className="px-4 sm:px-6">
+                        <div className="flex items-start justify-between">
+                          <Dialog.Title className="text-lg font-medium text-gray-900">
+                            Participants
+                          </Dialog.Title>
+                          <div className="ml-3 flex h-7 items-center">
+                            <button
+                              type="button"
+                              className="rounded-md bg-white text-gray-400 hover:text-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                              onClick={() => setShowParticipants(false)}
+                            >
+                              <span className="sr-only">Close panel</span>
+                              <XMarkIcon
+                                className="h-6 w-6"
+                                aria-hidden="true"
+                              />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="relative mt-6 flex-1 px-4 sm:px-6">
+                        <ul className="space-y-2">
+                          {participants.map((participant) => (
+                            <li
+                              key={participant._id}
+                              className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg"
+                            >
+                              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                {participant.username.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">
+                                  {participant.username}
+                                </p>
+                                <p className="text-sm text-gray-500 truncate">
+                                  {participant.email}
+                                </p>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  </Dialog.Panel>
+                </Transition.Child>
+              </div>
+            </div>
+          </div>
+        </Dialog>
+      </Transition.Root>
       <form onSubmit={handleSendMessage} className="p-4 border-t">
         <div className="flex">
           <input
