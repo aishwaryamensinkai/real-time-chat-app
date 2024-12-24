@@ -7,6 +7,11 @@ const messageSchema = new Schema({
   timestamp: { type: Date, default: Date.now },
   sender: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   room: { type: mongoose.Schema.Types.ObjectId, ref: "ChatRoom" },
+  attachment: {
+    filename: String,
+    fileId: mongoose.Schema.Types.ObjectId,
+    contentType: String,
+  },
 });
 
 module.exports = mongoose.model("Message", messageSchema);

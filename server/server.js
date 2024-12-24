@@ -8,10 +8,11 @@ const { Server } = require("socket.io");
 const connectDB = require("./config/db");
 const authRoutes = require("./routes/authRoutes");
 const chatRoomRoutes = require("./routes/chatRoomRoutes");
+const fileRoutes = require("./routes/fileRoutes");
 const Message = require("./models/Message");
 const ChatRoom = require("./models/ChatRoom");
 const User = require("./models/User");
-const errorMiddleware = require("./middleware/errorMiddleware"); // Import error middleware
+const errorMiddleware = require("./middleware/errorMiddleware");
 
 const app = express();
 const server = http.createServer(app);
@@ -22,10 +23,10 @@ const io = new Server(server, {
     origin: [
       "http://localhost:3000",
       "https://real-time-chat-app-mocha.vercel.app/",
-    ], // Replace with your frontend URL
-    credentials: true, // Allow credentials (cookies, headers)
-    methods: ["GET", "POST", "PUT", "DELETE"], // Allowed methods
-    allowedHeaders: ["Content-Type", "Authorization"], // Allowed headers
+    ],
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    allowedHeaders: ["Content-Type", "Authorization"],
   },
 });
 
@@ -39,6 +40,7 @@ app.use(express.json());
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/chatroom", chatRoomRoutes);
+app.use("/api/files", fileRoutes);
 
 // Placeholder route
 app.get("/", (req, res) => res.send("Real-Time Chat Application API"));
@@ -46,13 +48,7 @@ app.get("/", (req, res) => res.send("Real-Time Chat Application API"));
 // Use error handling middleware
 app.use(errorMiddleware);
 
-// Helper function to get active users count
-const getActiveUsersCount = (roomId) => {
-  const room = io.sockets.adapter.rooms.get(roomId);
-  return room ? room.size : 0;
-};
-
-// Real-Time Communication with Socket.IO
+// Socket.IO event handlers
 io.on("connection", (socket) => {
   console.log("A user connected:", socket.id);
 
@@ -205,8 +201,13 @@ io.on("connection", (socket) => {
       });
     }
   });
-  
 });
+
+// Helper function to get active users count
+const getActiveUsersCount = (roomId) => {
+  const room = io.sockets.adapter.rooms.get(roomId);
+  return room ? room.size : 0;
+};
 
 // Start the server
 const PORT = process.env.PORT || 5001;

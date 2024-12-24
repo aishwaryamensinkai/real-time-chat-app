@@ -4,6 +4,9 @@ const Message = require("../models/Message");
 const authMiddleware = require("../middleware/authMiddleware");
 const router = express.Router();
 const activeUsers = {}; // To track active users in each room using Socket.IO
+const fileRoutes = require("./fileRoutes");
+
+router.use("/files", fileRoutes);
 
 // Create Chat Room (Admin Only)
 router.post("/create", authMiddleware, async (req, res) => {
@@ -129,28 +132,31 @@ router.get("/", authMiddleware, async (req, res) => {
   }
 });
 
-// Send a Message
+// Update the sendMessage route to handle file attachments
 router.post("/message", authMiddleware, async (req, res) => {
-  const { roomId, text } = req.body;
+  const { roomId, text, attachmentId } = req.body;
   const userId = req.user.id;
-
-  // Validate input
-  if (!roomId || !text) {
-    return res
-      .status(400)
-      .json({ msg: "Room ID and message text are required" });
-  }
 
   try {
     const room = await ChatRoom.findById(roomId);
     if (!room) return res.status(404).json({ msg: "Chat room not found" });
 
-    const message = new Message({
+    let messageData = {
       text,
       sender: userId,
       room: roomId,
-    });
+    };
 
+    if (attachmentId) {
+      const attachment = await Message.findOne({
+        "attachment.fileId": attachmentId,
+      });
+      if (attachment) {
+        messageData.attachment = attachment.attachment;
+      }
+    }
+
+    const message = new Message(messageData);
     await message.save();
 
     const populatedMessage = await message.populate("sender", "username");
