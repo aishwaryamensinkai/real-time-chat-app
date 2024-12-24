@@ -249,6 +249,50 @@ export const sendMessage = createAsyncThunk(
   }
 );
 
+export const fetchParticipants = createAsyncThunk(
+  "chat/fetchParticipants",
+  async (roomId: string, { getState, rejectWithValue }) => {
+    try {
+      const { auth } = getState() as { auth: { token: string } };
+      const response = await axios.get(
+        `https://real-time-chat-app-6vra.onrender.com/api/chatroom/participants/${roomId}`,
+        {
+          headers: { Authorization: `Bearer ${auth.token}` },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to fetch participants"
+      );
+    }
+  }
+);
+
+export const removeParticipant = createAsyncThunk(
+  "chat/removeParticipant",
+  async (
+    { roomId, userId }: { roomId: string; userId: string },
+    { getState, rejectWithValue }
+  ) => {
+    try {
+      const { auth } = getState() as { auth: { token: string } };
+      const response = await axios.post(
+        "https://real-time-chat-app-6vra.onrender.com/api/chatroom/remove-participant",
+        { roomId, userId },
+        {
+          headers: { Authorization: `Bearer ${auth.token}` },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to remove participant"
+      );
+    }
+  }
+);
+
 // Slice
 const chatSlice = createSlice({
   name: "chat",
@@ -367,6 +411,14 @@ const chatSlice = createSlice({
       .addCase(sendMessage.fulfilled, (state, action) => {
         // console.log("sendMessage: fulfilled", action.payload);
         state.messages.push(action.payload);
+      })
+      .addCase(fetchParticipants.fulfilled, (state, action) => {
+        // You can store participants in the state if needed
+      })
+      .addCase(removeParticipant.fulfilled, (state, action) => {
+        if (state.currentRoom && action.payload.chatRoom) {
+          state.currentRoom = action.payload.chatRoom;
+        }
       });
   },
 });

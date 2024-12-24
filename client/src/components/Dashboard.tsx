@@ -10,6 +10,8 @@ import {
   setCurrentRoom,
   addNotification,
   clearNotifications,
+  fetchParticipants,
+  removeParticipant,
 } from "../store/slices/chatSlice";
 import { logout } from "../store/slices/authSlice";
 import { AppDispatch, RootState } from "../store";
@@ -38,6 +40,13 @@ interface IChatRoom {
   created_on: Date;
   participants: string[];
 }
+
+interface User {
+  _id: string;
+  username: string;
+  // ... other user properties
+}
+
 const Dashboard: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const { user } = useSelector((state: RootState) => state.auth);
@@ -53,6 +62,8 @@ const Dashboard: React.FC = () => {
     order: "asc" | "desc";
   }>({ field: "name", order: "asc" });
   const [dateFilter, setDateFilter] = useState<Date | null>(null);
+  const [participants, setParticipants] = useState<User[]>([]);
+  const activeUsers = participants.length;
 
   useEffect(() => {
     dispatch(fetchRooms());
@@ -106,6 +117,17 @@ const Dashboard: React.FC = () => {
       newSocket.disconnect();
     };
   }, [dispatch, currentRoom]);
+
+  useEffect(() => {
+    if (currentRoom) {
+      dispatch(fetchParticipants(currentRoom._id))
+        .unwrap()
+        .then((fetchedParticipants) => setParticipants(fetchedParticipants))
+        .catch((error) =>
+          console.error("Failed to fetch participants:", error)
+        );
+    }
+  }, [currentRoom, dispatch]);
 
   const handleCreateRoom = (e: React.FormEvent) => {
     e.preventDefault();
@@ -164,6 +186,21 @@ const Dashboard: React.FC = () => {
 
   const handleClearNotifications = () => {
     dispatch(clearNotifications());
+  };
+
+  const handleRemoveParticipant = (userId: string) => {
+    if (currentRoom && user?.role === "Admin") {
+      dispatch(removeParticipant({ roomId: currentRoom._id, userId }))
+        .unwrap()
+        .then(() => {
+          setParticipants(participants.filter((p) => p._id !== userId));
+          toast.success("Participant removed successfully");
+        })
+        .catch((error) => {
+          console.error("Failed to remove participant:", error);
+          toast.error("Failed to remove participant");
+        });
+    }
   };
 
   const isUserInRoom = (roomId: string): boolean => {
@@ -525,19 +562,35 @@ const Dashboard: React.FC = () => {
       </div>
       <div className="flex-1 flex flex-col">
         {currentRoom ? (
-          <>
-            {currentRoom && isUserInRoom(currentRoom._id) ? (
+          <div className="flex-1 flex">
+            <div className="w-3/4">
               <ChatRoom roomId={currentRoom._id} />
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <p className="text-gray-500">
-                  {currentRoom
-                    ? "You are not a member of this room. Join to view messages."
-                    : "Select a room to start chatting"}
-                </p>
-              </div>
-            )}
-          </>
+            </div>
+            <div className="w-1/4 bg-gray-100 p-4 overflow-y-auto">
+              <h3 className="text-lg font-semibold mb-4">Participants</h3>
+              <ul className="space-y-2">
+                {participants.map((participant) => (
+                  <li
+                    key={participant._id}
+                    className="flex justify-between items-center"
+                  >
+                    <span>{participant.username}</span>
+                    {user?.role === "Admin" &&
+                      user.username !== participant.username && (
+                        <button
+                          onClick={() =>
+                            handleRemoveParticipant(participant._id)
+                          }
+                          className="text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
         ) : (
           <div className="flex items-center justify-center h-full">
             <p className="text-gray-500">Select a room to start chatting</p>
