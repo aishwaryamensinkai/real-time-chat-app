@@ -51,7 +51,7 @@ router.post(
       const savedFile = await storeFile(req.file);
 
       const newMessage = new Message({
-        text: req.body.text || "File uploaded",
+        text: req.body.text,
         sender: req.user._id,
         room: req.body.roomId,
         attachment: {
