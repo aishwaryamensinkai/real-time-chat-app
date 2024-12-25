@@ -1,42 +1,52 @@
 const mongoose = require("mongoose");
-const Grid = require("gridfs-stream");
+const fs = require("fs");
+const { GridFSBucket } = require("mongodb");
 
-let gfs;
+let bucket;
 
-const connectGridFS = () => {
-  const conn = mongoose.connection;
-  gfs = Grid(conn.db, mongoose.mongo);
-  gfs.collection("uploads");
+// Initialize GridFS bucket
+const initBucket = () => {
+  if (!bucket) {
+    bucket = new GridFSBucket(mongoose.connection.db, {
+      bucketName: "uploads",
+    });
+  }
+  return bucket;
 };
 
-const storeFile = (file) => {
+// Store file in GridFS
+const storeFile = async (file) => {
+  const bucket = initBucket();
+
   return new Promise((resolve, reject) => {
-    const writestream = gfs.createWriteStream({
-      filename: file.originalname,
+    const writeStream = bucket.openUploadStream(file.originalname, {
       contentType: file.mimetype,
     });
 
-    const readStream = require("fs").createReadStream(file.path);
-    readStream.pipe(writestream);
+    const readStream = fs.createReadStream(file.path);
 
-    writestream.on("close", (savedFile) => {
-      resolve(savedFile);
-    });
-
-    writestream.on("error", (err) => {
-      reject(err);
-    });
+    readStream
+      .pipe(writeStream)
+      .on("error", function (error) {
+        reject(error);
+      })
+      .on("finish", function () {
+        // Clean up the temporary file
+        fs.unlink(file.path, (err) => {
+          if (err) console.error("Error removing temp file:", err);
+        });
+        resolve(writeStream);
+      });
   });
 };
 
-const retrieveFile = (fileId) => {
-  return new Promise((resolve, reject) => {
-    const readstream = gfs.createReadStream({ _id: fileId });
-    readstream.on("error", (err) => {
-      reject(err);
-    });
-    resolve(readstream);
-  });
+// Retrieve file from GridFS
+const retrieveFile = async (fileId) => {
+  const bucket = initBucket();
+  return bucket.openDownloadStream(new mongoose.Types.ObjectId(fileId));
 };
 
-module.exports = { connectGridFS, storeFile, retrieveFile };
+module.exports = {
+  storeFile,
+  retrieveFile,
+};

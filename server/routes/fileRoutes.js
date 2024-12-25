@@ -4,9 +4,36 @@ const multer = require("multer");
 const { storeFile, retrieveFile } = require("../utils/fileUtils");
 const Message = require("../models/Message");
 const authMiddleware = require("../middleware/authMiddleware");
+const path = require("path");
 
-const upload = multer({ dest: "uploads/" });
+// Configure multer for file upload
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, "uploads/");
+  },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(
+      null,
+      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
+    );
+  },
+});
 
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+  },
+});
+
+// Ensure uploads directory exists
+const fs = require("fs");
+if (!fs.existsSync("uploads")) {
+  fs.mkdirSync("uploads");
+}
+
+// File upload route
 router.post(
   "/upload",
   authMiddleware,
@@ -15,6 +42,10 @@ router.post(
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      if (!req.body.roomId) {
+        return res.status(400).json({ message: "Room ID is required" });
       }
 
       const savedFile = await storeFile(req.file);
@@ -31,15 +62,23 @@ router.post(
       });
 
       await newMessage.save();
+      const populatedMessage = await newMessage.populate("sender", "username");
 
-      res.status(201).json({ message: newMessage });
+      res.status(201).json({
+        message: populatedMessage,
+        success: true,
+      });
     } catch (error) {
       console.error("File upload error:", error);
-      res.status(500).json({ message: "File upload failed" });
+      res.status(500).json({
+        message: "File upload failed",
+        error: error.message,
+      });
     }
   }
 );
 
+// File download route
 router.get("/download/:fileId", authMiddleware, async (req, res) => {
   try {
     const fileStream = await retrieveFile(req.params.fileId);

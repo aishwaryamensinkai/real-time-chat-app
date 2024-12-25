@@ -6,7 +6,7 @@ const router = express.Router();
 const activeUsers = {}; // To track active users in each room using Socket.IO
 const fileRoutes = require("./fileRoutes");
 
-router.use("/files", fileRoutes);
+// router.use("/files", fileRoutes);
 
 // Create Chat Room (Admin Only)
 router.post("/create", authMiddleware, async (req, res) => {
