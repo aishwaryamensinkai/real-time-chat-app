@@ -82,13 +82,23 @@ router.post(
 // File download route
 router.get("/download/:fileId", authMiddleware, async (req, res) => {
   try {
-    const fileStream = await retrieveFile(req.params.fileId);
+    const { fileId } = req.params;
+
+    if (!fileId) {
+      return res.status(400).json({ message: "File ID is required" });
+    }
+
     const message = await Message.findOne({
-      "attachment.fileId": req.params.fileId,
+      "attachment.fileId": fileId,
     });
 
-    if (!message) {
+    if (!message || !message.attachment) {
       return res.status(404).json({ message: "File not found" });
+    }
+
+    const fileStream = await retrieveFile(fileId);
+    if (!fileStream) {
+      return res.status(404).json({ message: "File content not found" });
     }
 
     res.set("Content-Type", message.attachment.contentType);
@@ -100,7 +110,10 @@ router.get("/download/:fileId", authMiddleware, async (req, res) => {
     fileStream.pipe(res);
   } catch (error) {
     console.error("File download error:", error);
-    res.status(500).json({ message: "File download failed" });
+    res.status(500).json({
+      message: "File download failed",
+      error: error.message,
+    });
   }
 });
 
