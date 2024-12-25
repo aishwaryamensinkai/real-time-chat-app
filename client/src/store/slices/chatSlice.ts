@@ -1,4 +1,9 @@
-import { createSlice, createAsyncThunk, PayloadAction } from "@reduxjs/toolkit";
+import {
+  createSlice,
+  createAsyncThunk,
+  PayloadAction,
+  isRejectedWithValue,
+} from "@reduxjs/toolkit";
 import axios from "axios";
 import { RootState } from "../index";
 
@@ -288,6 +293,74 @@ export const removeParticipant = createAsyncThunk(
     } catch (error: any) {
       return rejectWithValue(
         error.response?.data?.message || "Failed to remove participant"
+      );
+    }
+  }
+);
+
+export const uploadAttachment = createAsyncThunk(
+  "chat/uploadAttachment",
+  async (formData: FormData, { getState, dispatch }) => {
+    try {
+      const { auth } = getState() as { auth: { token: string } };
+      const response = await axios.post(
+        "https://real-time-chat-app-6vra.onrender.com/api/files/upload",
+        formData,
+        {
+          headers: {
+            Authorization: `Bearer ${auth.token}`,
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      // console.log("Upload response data:", response.data);
+
+      // Dispatch addMessage action with the new message containing the attachment
+      if (response.data.message) {
+        dispatch(addMessage(response.data.message));
+      }
+
+      return response.data.message;
+    } catch (error: any) {
+      console.error(
+        "Upload error details:",
+        error.response?.data || error.message
+      );
+      return isRejectedWithValue(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to upload attachment"
+      );
+    }
+  }
+);
+
+export const downloadAttachment = createAsyncThunk(
+  "chat/downloadAttachment",
+  async (
+    { fileId, filename }: { fileId: string; filename: string },
+    { getState, rejectWithValue }
+  ) => {
+    try {
+      const { auth } = getState() as { auth: { token: string } };
+      const response = await axios.get(
+        `https://real-time-chat-app-6vra.onrender.com/api/files/download/${fileId}`,
+        {
+          headers: { Authorization: `Bearer ${auth.token}` },
+          responseType: "blob",
+        }
+      );
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      return filename;
+    } catch (error: any) {
+      return rejectWithValue(
+        error.response?.data?.message || "Failed to download attachment"
       );
     }
   }

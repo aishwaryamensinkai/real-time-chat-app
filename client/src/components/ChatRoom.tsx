@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import {
   fetchMessages,
@@ -7,10 +7,13 @@ import {
   addSystemMessage,
   setActiveUsers,
   addNotification,
+  uploadAttachment,
+  downloadAttachment,
 } from "../store/slices/chatSlice";
 import { AppDispatch, RootState } from "../store";
 import { io, Socket } from "socket.io-client";
 import { formatDate } from "../utils/dateFormatter";
+import { PaperClipIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 
 export interface ChatRoomProps {
   roomId: string;
@@ -21,6 +24,12 @@ interface User {
   username: string;
 }
 
+interface Attachment {
+  filename: string;
+  fileId: string;
+  contentType: string;
+}
+
 interface Message {
   _id: string;
   sender: User;
@@ -28,10 +37,13 @@ interface Message {
   timestamp: string;
   type: "user" | "system";
   room: string;
+  attachment?: Attachment;
 }
 
 export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
   const [message, setMessage] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const dispatch = useDispatch<AppDispatch>();
   const { messages, activeUsers, currentRoom } = useSelector(
     (state: RootState) => state.chat
@@ -116,12 +128,49 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
     }
   }, [roomId, user, token, dispatch]);
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (message.trim() && roomId && user) {
-      dispatch(sendMessage({ roomId, text: message }));
+    if ((message.trim() || file) && roomId && user) {
+      if (file) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("roomId", roomId);
+        formData.append("text", message);
+        try {
+          const result = await dispatch(uploadAttachment(formData));
+          if (uploadAttachment.rejected.match(result)) {
+            throw new Error((result.payload as string) || "Upload failed");
+          }
+          // console.log("Upload successful:", result.payload);
+          // The message with the attachment will be added to the state by the thunk
+          setFile(null);
+          if (fileInputRef.current) {
+            fileInputRef.current.value = "";
+          }
+        } catch (error) {
+          console.error("Upload error:", error);
+          // You might want to show an error message to the user here
+        }
+      } else {
+        dispatch(sendMessage({ roomId, text: message }));
+      }
       setMessage("");
     }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleDownload = (attachment: Attachment) => {
+    dispatch(
+      downloadAttachment({
+        fileId: attachment.fileId,
+        filename: attachment.filename,
+      })
+    );
   };
 
   const groupMessagesByDate = (messages: Message[]) => {
@@ -151,7 +200,7 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
             className={`flex ${
               msg.type === "system"
                 ? "justify-center"
-                : msg.sender._id === user?._id?.toString()
+                : msg.sender?._id === user?._id?.toString()
                 ? "justify-end"
                 : "justify-start"
             } mb-4`}
@@ -163,13 +212,29 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
             ) : (
               <div
                 className={`max-w-xs px-4 py-2 rounded-lg ${
-                  msg.sender._id === user?._id?.toString()
+                  msg.sender?._id === user?._id?.toString()
                     ? "bg-blue-100 text-black"
                     : "bg-gray-200"
                 }`}
               >
-                <p className="font-semibold text-sm">{msg.sender.username}</p>
+                <p className="font-semibold text-sm">
+                  {msg.sender?.username || "Unknown User"}
+                </p>
                 <p>{msg.text}</p>
+                {msg.attachment && (
+                  <div className="mt-2">
+                    <button
+                      onClick={() => handleDownload(msg.attachment!)}
+                      className="flex items-center text-blue-500 hover:text-blue-700"
+                      aria-label={`Download ${msg.attachment.filename}`}
+                    >
+                      <ArrowDownTrayIcon className="w-4 h-4 mr-1" />
+                      <span className="underline">
+                        {msg.attachment.filename}
+                      </span>
+                    </button>
+                  </div>
+                )}
                 <p
                   className="text-xs text-gray-500"
                   style={{ textAlign: "right", fontSize: "10px" }}
@@ -207,17 +272,37 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
         )}
       </div>
       <form onSubmit={handleSendMessage} className="p-4 border-t">
-        <div className="flex">
+        {file && (
+          <div className="pb-1 font-bold text-sm text-gray-600">
+            {file.name}
+          </div>
+        )}
+        <div className="flex items-center space-x-2">
           <input
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            className="flex-1 px-4 py-2 border rounded-l-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="flex-1 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Type your message..."
+          />
+          <label
+            htmlFor="file-upload"
+            className="cursor-pointer bg-gray-200 p-2 rounded-md hover:bg-gray-300 transition-colors"
+          >
+            <PaperClipIcon className="h-6 w-6 text-gray-600" />
+            <span className="sr-only">Attach file</span>
+          </label>
+          <input
+            id="file-upload"
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            className="hidden"
+            aria-label="Upload file"
           />
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded-r-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             Send
           </button>
