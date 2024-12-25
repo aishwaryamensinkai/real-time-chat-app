@@ -47,12 +47,13 @@ router.post(
       if (!req.body.roomId) {
         return res.status(400).json({ message: "Room ID is required" });
       }
+      const userId = req.user.id;
 
       const savedFile = await storeFile(req.file);
 
       const newMessage = new Message({
-        text: req.body.text,
-        sender: req.user._id,
+        text: req.body.text || "File uploaded",
+        sender: userId,
         room: req.body.roomId,
         attachment: {
           filename: req.file.originalname,
