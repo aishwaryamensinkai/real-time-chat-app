@@ -1,46 +1,131 @@
-# Getting Started with Create React App
+# Real-Time Chat Application
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Overview
 
-## Available Scripts
+This is a real-time chat application built with React, Redux, and Socket.io. It features user authentication, chat rooms, and real-time messaging capabilities.
 
-In the project directory, you can run:
+## Features
 
-### `npm start`
+- User authentication (signup, login, forgot password, reset password)
+- Create and join chat rooms
+- Real-time messaging
+- File attachments
+- User roles (Admin and Member)
+- Responsive design
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+## Project Structure
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+```
+.
+├── public/
+├── src/
+│   ├── components/
+│   │   ├── ChatRoom.tsx
+│   │   ├── Dashboard.tsx
+│   │   ├── ForgotPassword.tsx
+│   │   ├── Login.tsx
+│   │   ├── Notifications.tsx
+│   │   ├── ResetPassword.tsx
+│   │   └── Signup.tsx
+│   ├── store/
+│   │   ├── index.ts
+│   │   └── slices/
+│   │       ├── authSlice.ts
+│   │       └── chatSlice.ts
+│   ├── types/
+│   │   └── index.ts
+│   ├── utils/
+│   │   └── dateFormatter.ts
+│   ├── App.tsx
+│   ├── index.css
+│   └── index.tsx
+├── package.json
+├── tsconfig.json
+└── README.md
+```
 
-### `npm test`
+## Prerequisites
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+- Node.js (v14 or later)
+- npm or yarn
 
-### `npm run build`
+## Setup
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+1. Clone the repository:
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+   ```
+   git clone https://github.com/aishwaryamensinkai/real-time-chat-app.git
+   cd real-time-chat-app
+   cd client
+   ```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+2. Install dependencies:
 
-### `npm run eject`
+   ```
+   npm install
+   ```
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+   or
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+   ```
+   yarn install
+   ```
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+3. Set up environment variables:
+   Create a `.env` file in the root directory and add the following:
+   ```
+   REACT_APP_API_URL=<your-api-url>
+   ```
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+## Running the Application
 
-## Learn More
+To start the development server:
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+```
+npm start
+```
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+or
+
+```
+yarn start
+```
+
+The application will be available at `http://localhost:3000`.
+
+## Building for Production
+
+To create a production build:
+
+```
+npm run build
+```
+
+or
+
+```
+yarn build
+```
+
+## Testing
+
+To run tests:
+
+```
+npm test
+```
+
+or
+
+```
+yarn test
+```
+
+## Technologies Used
+
+- React
+- Redux Toolkit
+- TypeScript
+- Tailwind CSS
+- Socket.io
+- Axios
