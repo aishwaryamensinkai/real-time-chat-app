@@ -342,6 +342,10 @@ export const downloadAttachment = createAsyncThunk(
     { getState, rejectWithValue }
   ) => {
     try {
+      if (!fileId) {
+        throw new Error("File ID is required");
+      }
+
       const { auth } = getState() as { auth: { token: string } };
       const response = await axios.get(
         `https://real-time-chat-app-6vra.onrender.com/api/files/download/${fileId}`,
@@ -350,6 +354,8 @@ export const downloadAttachment = createAsyncThunk(
           responseType: "blob",
         }
       );
+
+      // Create blob URL and trigger download
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
@@ -357,6 +363,8 @@ export const downloadAttachment = createAsyncThunk(
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url); // Clean up the blob URL
+
       return filename;
     } catch (error: any) {
       return rejectWithValue(

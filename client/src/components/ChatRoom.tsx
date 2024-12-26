@@ -8,12 +8,12 @@ import {
   setActiveUsers,
   addNotification,
   uploadAttachment,
-  downloadAttachment,
 } from "../store/slices/chatSlice";
 import { AppDispatch, RootState } from "../store";
 import { io, Socket } from "socket.io-client";
 import { formatDate } from "../utils/dateFormatter";
 import { PaperClipIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
+import { toast } from "react-toastify";
 
 export interface ChatRoomProps {
   roomId: string;
@@ -26,7 +26,7 @@ interface User {
 
 interface Attachment {
   filename: string;
-  fileId: string;
+  fileId?: string; // MongoDB ObjectId as string
   contentType: string;
 }
 
@@ -88,24 +88,6 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
         }
       );
 
-      // newSocket.on(
-      //   "userLeftRoom",
-      //   (data: { username: string; roomName: string }) => {
-      //     dispatch(
-      //       addSystemMessage({
-      //         text: `${data.username} has left the room`,
-      //         timestamp: new Date().toISOString(),
-      //       })
-      //     );
-      //     dispatch(
-      //       addNotification({
-      //         message: `${data.username} has left the room ${data.roomName}`,
-      //         timestamp: new Date().toISOString(),
-      //       })
-      //     );
-      //   }
-      // );
-
       newSocket.on("activeUsers", (count: number) => {
         dispatch(setActiveUsers(count));
       });
@@ -120,7 +102,6 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
           });
           newSocket.off("newMessage");
           newSocket.off("userJoinedRoom");
-          newSocket.off("userLeftRoom");
           newSocket.off("activeUsers");
           newSocket.disconnect();
         }
@@ -141,15 +122,13 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
           if (uploadAttachment.rejected.match(result)) {
             throw new Error((result.payload as string) || "Upload failed");
           }
-          // console.log("Upload successful:", result.payload);
-          // The message with the attachment will be added to the state by the thunk
           setFile(null);
           if (fileInputRef.current) {
             fileInputRef.current.value = "";
           }
         } catch (error) {
           console.error("Upload error:", error);
-          // You might want to show an error message to the user here
+          toast.error("Failed to upload file. Please try again.");
         }
       } else {
         dispatch(sendMessage({ roomId, text: message }));
@@ -164,26 +143,87 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
     }
   };
 
-  const handleDownload = (attachment: Attachment) => {
-    dispatch(
-      downloadAttachment({
-        fileId: attachment.fileId,
-        filename: attachment.filename,
-      })
+  const handleDownload = async (attachment: Attachment) => {
+    try {
+      if (!attachment) {
+        throw new Error("No attachment provided");
+      }
+
+      // console.log("Downloading attachment:", attachment);
+
+      // Get the file ID from the uploads.files collection using the filename
+      const response = await fetch(
+        `https://real-time-chat-app-6vra.onrender.com/api/files/download-by-name/${encodeURIComponent(
+          attachment.filename
+        )}`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.statusText}`);
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = attachment.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+      toast.success("File downloaded successfully!");
+    } catch (error) {
+      console.error("Download error:", error);
+      toast.error("Failed to download file. Please try again.");
+    }
+  };
+
+  const renderAttachment = (attachment: Attachment) => {
+    if (!attachment) return null;
+
+    return (
+      <div className="mt-2">
+        <button
+          onClick={() => handleDownload(attachment)}
+          className="flex items-center text-blue-500 hover:text-blue-700 transition-colors group"
+          aria-label={`Download ${attachment.filename}`}
+        >
+          <ArrowDownTrayIcon className="w-4 h-4 mr-1 group-hover:scale-110 transition-transform" />
+          <span className="underline group-hover:no-underline">
+            {attachment.filename}
+          </span>
+        </button>
+      </div>
     );
   };
 
-  const groupMessagesByDate = (messages: Message[]) => {
-    const groups: { [key: string]: Message[] } = {};
-    messages.forEach((msg) => {
-      const date = new Date(msg.timestamp).toDateString();
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(msg);
-    });
-    return groups;
-  };
+  const renderMessage = (msg: Message) => (
+    <div
+      className={`max-w-xs px-4 py-2 rounded-lg ${
+        msg.sender?._id === user?._id?.toString()
+          ? "bg-blue-100 text-black"
+          : "bg-gray-200"
+      }`}
+    >
+      <p className="font-semibold text-sm">
+        {msg.sender?.username || "Unknown User"}
+      </p>
+      <p>{msg.text}</p>
+      {msg.attachment && renderAttachment(msg.attachment)}
+      <p className="text-xs text-gray-500 text-right">
+        {new Date(msg.timestamp).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })}
+      </p>
+    </div>
+  );
 
   const renderMessages = () => {
     const groupedMessages = groupMessagesByDate(messages);
@@ -210,46 +250,24 @@ export const ChatRoom: React.FC<ChatRoomProps> = ({ roomId }) => {
                 {msg.text}
               </div>
             ) : (
-              <div
-                className={`max-w-xs px-4 py-2 rounded-lg ${
-                  msg.sender?._id === user?._id?.toString()
-                    ? "bg-blue-100 text-black"
-                    : "bg-gray-200"
-                }`}
-              >
-                <p className="font-semibold text-sm">
-                  {msg.sender?.username || "Unknown User"}
-                </p>
-                <p>{msg.text}</p>
-                {msg.attachment && (
-                  <div className="mt-2">
-                    <button
-                      onClick={() => handleDownload(msg.attachment!)}
-                      className="flex items-center text-blue-500 hover:text-blue-700"
-                      aria-label={`Download ${msg.attachment.filename}`}
-                    >
-                      <ArrowDownTrayIcon className="w-4 h-4 mr-1" />
-                      <span className="underline">
-                        {msg.attachment.filename}
-                      </span>
-                    </button>
-                  </div>
-                )}
-                <p
-                  className="text-xs text-gray-500"
-                  style={{ textAlign: "right", fontSize: "10px" }}
-                >
-                  {new Date(msg.timestamp).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </p>
-              </div>
+              renderMessage(msg)
             )}
           </div>
         ))}
       </React.Fragment>
     ));
+  };
+
+  const groupMessagesByDate = (messages: Message[]) => {
+    const groups: { [key: string]: Message[] } = {};
+    messages.forEach((msg) => {
+      const date = new Date(msg.timestamp).toDateString();
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(msg);
+    });
+    return groups;
   };
 
   return (
