@@ -9,7 +9,7 @@ const messageSchema = new Schema({
   room: { type: mongoose.Schema.Types.ObjectId, ref: "ChatRoom" },
   attachment: {
     filename: String,
-    fileId: mongoose.Schema.Types.ObjectId,
+    fileId: String, // Store as string for better compatibility
     contentType: String,
   },
 });

@@ -1,37 +1,19 @@
 const express = require("express");
 const router = express.Router();
 const multer = require("multer");
-const { storeFile, retrieveFile } = require("../utils/fileUtils");
+const { GridFSBucket, ObjectId } = require("mongodb");
 const Message = require("../models/Message");
 const authMiddleware = require("../middleware/authMiddleware");
-const path = require("path");
+const mongoose = require("mongoose");
 
-// Configure multer for file upload
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, "uploads/");
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(
-      null,
-      file.fieldname + "-" + uniqueSuffix + path.extname(file.originalname)
-    );
-  },
-});
-
+// Configure multer for GridFS
+const storage = multer.memoryStorage();
 const upload = multer({
   storage: storage,
   limits: {
     fileSize: 5 * 1024 * 1024, // 5MB limit
   },
 });
-
-// Ensure uploads directory exists
-const fs = require("fs");
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
-}
 
 // File upload route
 router.post(
@@ -47,17 +29,44 @@ router.post(
       if (!req.body.roomId) {
         return res.status(400).json({ message: "Room ID is required" });
       }
+
       const userId = req.user.id;
+      const bucket = new GridFSBucket(mongoose.connection.db, {
+        bucketName: "uploads",
+      });
 
-      const savedFile = await storeFile(req.file);
+      // Create a unique filename
+      const timestamp = Date.now();
+      const uniqueFilename = `${timestamp}-${req.file.originalname}`;
 
+      // Upload file to GridFS
+      const uploadStream = bucket.openUploadStream(uniqueFilename, {
+        contentType: req.file.mimetype,
+      });
+
+      // Create a promise to handle the upload
+      const uploadPromise = new Promise((resolve, reject) => {
+        uploadStream.on("finish", function () {
+          resolve(uploadStream.id);
+        });
+        uploadStream.on("error", reject);
+      });
+
+      // Write the file to GridFS
+      uploadStream.write(req.file.buffer);
+      uploadStream.end();
+
+      // Wait for the upload to complete
+      const fileId = await uploadPromise;
+
+      // Create message with attachment
       const newMessage = new Message({
-        text: req.body.text || "",
+        text: req.body.text || "File uploaded",
         sender: userId,
         room: req.body.roomId,
         attachment: {
           filename: req.file.originalname,
-          fileId: savedFile._id,
+          fileId: fileId.toString(), // Convert ObjectId to string
           contentType: req.file.mimetype,
         },
       });
@@ -79,35 +88,34 @@ router.post(
   }
 );
 
-// File download route
-router.get("/download/:fileId", authMiddleware, async (req, res) => {
+// File download by filename route
+router.get("/download-by-name/:filename", authMiddleware, async (req, res) => {
   try {
-    const { fileId } = req.params;
+    const filename = decodeURIComponent(req.params.filename);
 
-    if (!fileId) {
-      return res.status(400).json({ message: "File ID is required" });
-    }
-
-    const message = await Message.findOne({
-      "attachment.fileId": fileId,
+    // Find the file in GridFS
+    const bucket = new GridFSBucket(mongoose.connection.db, {
+      bucketName: "uploads",
     });
 
-    if (!message || !message.attachment) {
+    // Find the file metadata
+    const files = await bucket
+      .find({ filename: { $regex: filename + "$" } })
+      .toArray();
+
+    if (!files || files.length === 0) {
       return res.status(404).json({ message: "File not found" });
     }
 
-    const fileStream = await retrieveFile(fileId);
-    if (!fileStream) {
-      return res.status(404).json({ message: "File content not found" });
-    }
+    // Get the most recent file if multiple exist
+    const file = files.sort((a, b) => b.uploadDate - a.uploadDate)[0];
 
-    res.set("Content-Type", message.attachment.contentType);
-    res.set(
-      "Content-Disposition",
-      `attachment; filename="${message.attachment.filename}"`
-    );
+    res.set("Content-Type", file.contentType);
+    res.set("Content-Disposition", `attachment; filename="${filename}"`);
 
-    fileStream.pipe(res);
+    // Stream the file to the response
+    const downloadStream = bucket.openDownloadStream(file._id);
+    downloadStream.pipe(res);
   } catch (error) {
     console.error("File download error:", error);
     res.status(500).json({
