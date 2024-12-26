@@ -52,7 +52,7 @@ router.post(
       const savedFile = await storeFile(req.file);
 
       const newMessage = new Message({
-        text: req.body.text,
+        text: req.body.text || "",
         sender: userId,
         room: req.body.roomId,
         attachment: {
